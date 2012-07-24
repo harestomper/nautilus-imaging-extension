@@ -1,0 +1,11 @@
+
+#ifndef CONFIG_H
+#define CONFIG_H
+
+#cmakedefine GETTEXT_PACKAGE "@GETTEXT_PACKAGE@"
+#cmakedefine GNOMELOCALEDIR "@GNOMELOCALEDIR@"
+#cmakedefine PACKAGE_NAME "@PACKAGE_NAME@"
+#cmakedefine PACKAGE_STRING "@PACKAGE_STRING@"
+#cmakedefine PACKAGE_VERSION "@PACKAGE_VERSION@"
+
+#endif // CONFIG_H
