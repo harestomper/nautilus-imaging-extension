@@ -20,6 +20,9 @@
  */
 
 #include "nimconfig.h"
+#include <string.h>
+#include <errno.h>
+#include <stdio.h>
 //------------------------------------------------------------------------------
 
 
@@ -84,7 +87,11 @@ static void nim_config_init (NimConfig *self)
 //------------------------------------------------------------------------------
 static gchar *nim_config_build_filename (void)
 {
-  return g_build_filename (G_DIR_SEPARATOR_S, g_get_user_config_dir (), NIM_CFG_FILENAME, NULL);
+  return g_build_filename (G_DIR_SEPARATOR_S,
+                           g_get_user_config_dir (),
+                           "nautilus-imaging-extension",
+                           NIM_CFG_FILENAME,
+                           NULL);
 }
 //------------------------------------------------------------------------------
 
@@ -105,7 +112,7 @@ static NimConfig* nim_config_new (void)
   priv->kf = g_key_file_new ();
   filename = nim_config_build_filename ();
 
-  g_key_file_load_from_file (ptiv->kf, filename, 0, &error))
+  g_key_file_load_from_file (priv->kf, filename, 0, &error);
 
   if (error) {
     g_warning ("%s:%s", G_STRLOC, error->message);
@@ -113,7 +120,7 @@ static NimConfig* nim_config_new (void)
   }
 
   g_free (filename);
-  return gobject;
+  return this;
 }
 //------------------------------------------------------------------------------
 
@@ -122,7 +129,7 @@ static NimConfig* nim_config_new (void)
 NimConfig* nim_config_default (void)
 {
     if (default_nim_config == NULL)
-        default_nim_confnig = nim_config_new ();
+        default_nim_config = nim_config_new ();
 
     return default_nim_config;
 }
@@ -133,22 +140,37 @@ NimConfig* nim_config_default (void)
 void nim_config_sync (void)
 {
   NimConfig *this;
-  NimConfigPrivate *priv;
   gchar *contents;
   gchar *filename;
   gsize length;
   gchar *dirname;
+  GError *error = NULL;
 
   this = nim_config_default ();
   g_return_if_fail (NIM_IS_CONFIG (this));
 
-  contents = g_key_file_to_data (this->priv->kf, &length, NULL);
+  contents = g_key_file_to_data (this->priv->kf, &length, &error);
   filename = nim_config_build_filename ();
-  dirname = g_path_get_basename (filename);
+  dirname = g_path_get_dirname (filename);
 
-  if (!g_file_test (dirname, G_FILE_TEST_EXISTS)) {
-    if (g_mkdir_with_parents (dirname, 0777))
-      g_file_set_contents (filename, contents, (gssize) length, NULL);
+  if (error) {
+    g_debug ("%s: %s", G_STRLOC, error->message);
+    g_error_free (error);
+    error = NULL;
+  }
+
+  if (!g_file_test (dirname, G_FILE_TEST_IS_DIR)) {
+
+    if (g_mkdir_with_parents (dirname, 0775) == -1)
+      g_warning ("%s: %s", G_STRLOC, strerror (errno));
+  }
+
+  g_file_set_contents (filename, contents, (gssize) length, &error);
+
+  if (error) {
+    g_debug ("%s: %s", G_STRLOC, error->message);
+    g_error_free (error);
+    error = NULL;
   }
 
   g_free (filename);
@@ -183,7 +205,7 @@ void nim_config_set_int (const gchar *group, const gchar *key, gint value)
   NimConfigPrivate *priv;
 
   config = nim_config_default ();
-  g_return_val_if_fail (NIM_IS_CONFIG (config), dfval);
+  g_return_if_fail (NIM_IS_CONFIG (config));
   priv = config->priv;
 
   g_key_file_set_integer (priv->kf, group, key, value);
@@ -210,13 +232,13 @@ gint64 nim_config_get_int64 (const gchar *group, const gchar *key, gint64 dfval)
 
 
 //------------------------------------------------------------------------------
-void nim_config_get_int64 (const gchar *group, const gchar *key, gint64 value)
+void nim_config_set_int64 (const gchar *group, const gchar *key, gint64 value)
 {
   NimConfig *config;
   NimConfigPrivate *priv;
 
   config = nim_config_default ();
-  g_return_val_if_fail (NIM_IS_CONFIG (config), dfval);
+  g_return_if_fail (NIM_IS_CONFIG (config));
   priv = config->priv;
 
   g_key_file_set_int64 (priv->kf, group, key, value);
@@ -249,7 +271,7 @@ void nim_config_set_double (const gchar *group, const gchar *key, gdouble value)
   NimConfigPrivate *priv;
 
   config = nim_config_default ();
-  g_return_val_if_fail (NIM_IS_CONFIG (config), dfval);
+  g_return_if_fail (NIM_IS_CONFIG (config));
   priv = config->priv;
 
   g_key_file_set_double (priv->kf, group, key, value);
@@ -282,7 +304,7 @@ void nim_config_set_bool (const gchar *group, const gchar *key, gint64 value)
   NimConfigPrivate *priv;
 
   config = nim_config_default ();
-  g_return_val_if_fail (NIM_IS_CONFIG (config), dfval);
+  g_return_if_fail (NIM_IS_CONFIG (config));
   priv = config->priv;
 
   g_key_file_set_boolean (priv->kf, group, key, value);
@@ -297,13 +319,13 @@ gchar* nim_config_get_string (const gchar *group, const gchar *key, const gchar 
   NimConfigPrivate *priv;
 
   config = nim_config_default ();
-  g_return_val_if_fail (NIM_IS_CONFIG (config), dfval);
+  g_return_val_if_fail (NIM_IS_CONFIG (config), g_strdup (dfval));
   priv = config->priv;
 
   if (g_key_file_has_key (priv->kf, group, key, NULL))
     return g_key_file_get_string (priv->kf, group, key, NULL);
   else
-    return dfval;
+    return g_strdup (dfval);
 }
 //------------------------------------------------------------------------------
 
@@ -315,7 +337,7 @@ void nim_config_set_string   (const gchar *group, const gchar *key, const gchar 
   NimConfigPrivate *priv;
 
   config = nim_config_default ();
-  g_return_val_if_fail (NIM_IS_CONFIG (config), dfval);
+  g_return_if_fail (NIM_IS_CONFIG (config));
   priv = config->priv;
 
   if (value)

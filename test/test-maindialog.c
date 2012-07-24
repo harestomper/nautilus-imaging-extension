@@ -20,7 +20,7 @@
  */
 
 /*
-gcc -Wall `pkg-config --cflags --libs glib-2.0,gobject-2.0,gtk+-3.0` -o test-maindialog nimmaindialog.c nimconfig.c test-maindialog.c
+gcc -Wall `pkg-config --cflags --libs glib-2.0,gobject-2.0,gtk+-3.0` -o test-maindialog ../src/nimmaindialog.c ../src/nimconfig.c test-maindialog.c
 */
 
 #include <gtk/gtk.h>

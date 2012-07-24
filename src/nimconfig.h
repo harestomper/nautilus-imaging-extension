@@ -62,7 +62,7 @@ gint        nim_config_get_int      (const gchar *group, const gchar *key, gint 
 void        nim_config_set_int      (const gchar *group, const gchar *key, gint value);
 
 gint64      nim_config_get_int64    (const gchar *group, const gchar *key, gint64 dfval);
-void        nim_config_get_int64    (const gchar *group, const gchar *key, gint64 value);
+void        nim_config_set_int64    (const gchar *group, const gchar *key, gint64 value);
 
 gdouble     nim_config_get_double   (const gchar *group, const gchar *key, gdouble dfval);
 void        nim_config_set_double   (const gchar *group, const gchar *key, gdouble value);
@@ -83,6 +83,9 @@ void        nim_config_set_string   (const gchar *group, const gchar *key, const
 #define NIM_CFG_GRP_COMMON  "Common"
 
 #define NIM_CFG_FILENAME    "nautilus-imaging.conf"
+#define NIM_CFG_ACTIVE_SAVE "last_active_save"
+#define NIM_CFG_RET_TO_HERE "return_to_here"
+#define NIM_CFG_SELECT_FILES "select_modified_files"
 #define NIM_CFG_LAST_FOLDER "last_folder"
 #define NIM_CFG_ASPECT      "aspect_ratio"
 #define NIM_CFG_WIDTH       "last_width"

@@ -24,6 +24,7 @@
 #define __NIMMAINDIALOG_H__
 
 #include <gtk/gtk.h>
+#include "nimconfig.h"
 
 G_BEGIN_DECLS
 
