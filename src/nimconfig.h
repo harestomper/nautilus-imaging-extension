@@ -24,6 +24,7 @@
 #define __NIMCONFIG_H__
 
 #include <glib-object.h>
+#include "nimmain.h"
 
 G_BEGIN_DECLS
 
@@ -74,7 +75,7 @@ gchar*      nim_config_get_string   (const gchar *group, const gchar *key, const
 void        nim_config_set_string   (const gchar *group, const gchar *key, const gchar *value);
 
 #define NIM_CFG_GRP_ROTATE  "Rotation"
-#define NIM_CFG_GRP_ReSIZE  "Resize"
+#define NIM_CFG_GRP_RESIZE  "Resize"
 #define NIM_CFG_GRT_WATER   "Watermark"
 #define NIM_CFG_GRP_THUMB   "Thumbnails"
 #define NIM_CFG_GRP_CORNER  "RoundCorners"

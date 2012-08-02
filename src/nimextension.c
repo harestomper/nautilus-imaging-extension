@@ -84,14 +84,12 @@ static GList *nim_filter_files (GList *files)
 
 
 //------------------------------------------------------------------------------
-static void nautilus_menu_item_activated  (NautilusMenuItem *item, GList *files)
+static void nautilus_menu_item_activated  (NautilusMenuItem *item, GList *files, GtkWidget *parent_window)
 {
   GtkWidget *dialog;
   GList *filelist = NULL;
-  GtkWidget *parent_window;
 
   filelist = nim_filter_files (files);
-  parent_window = gtk_widget_get_toplevel (GTK_WIDGET (item));
 
   if (filelist) {
     dialog = nim_main_dialog_new (GTK_WINDOW (parent_window), filelist);
@@ -194,14 +192,14 @@ void nim_extension_register_type (GTypeModule *module)
   };
 
   nim_extension_type = g_type_module_register_type (module,
-                 G_TYPE_OBJECT,
-                 "NimExtension",
-                 &info, 0);
+                                                    G_TYPE_OBJECT,
+                                                    "NimExtension",
+                                                    &info, 0);
 
   g_type_module_add_interface (module,
-             nim_extension_type,
-             NAUTILUS_TYPE_MENU_PROVIDER,
-             &menu_provider_iface_info);
+                               nim_extension_type,
+                               NAUTILUS_TYPE_MENU_PROVIDER,
+                               &menu_provider_iface_info);
 }
 //------------------------------------------------------------------------------
 
@@ -234,3 +232,7 @@ void  nautilus_module_list_types (const GType **types, int *num_types)
   *types = type_list;
   *num_types = G_N_ELEMENTS (type_list);
 }
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------

@@ -92,8 +92,7 @@ enum {
 #define magick_pixel_new()                    (NewPixelWand ())
 #define magick_pixel_destroy(pixel_wand)      (DestroyPixelWand ((pixel_wand)))
 #define magick_wand_ping_image(wand, filename) (MagickPingImage ((wand), (filename)))
-
-
+  
 G_END_DECLS
 
 #endif /* _NIMMAIN_H_ */

@@ -25,6 +25,7 @@
 
 #include <gtk/gtk.h>
 #include "nimconfig.h"
+#include "nimmain.h"
 
 G_BEGIN_DECLS
 
@@ -68,7 +69,7 @@ enum {
 
 GType nim_main_dialog_get_type (void);
 
-GtkWidget *nim_main_dialog_new (void);
+GtkWidget *nim_main_dialog_new (GtkWindow *parent_window, GList *filelist);
 
 
 G_END_DECLS

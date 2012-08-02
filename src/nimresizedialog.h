@@ -23,8 +23,8 @@
 #ifndef __NIMRESIZEDIALOG_H__
 #define __NIMRESIZEDIALOG_H__
 
-#include <gtk/gtk.h>
 #include "nimconfig.h"
+#include "nimmain.h"
 
 G_BEGIN_DECLS
 
@@ -52,10 +52,19 @@ struct _NimResizeDialogClass
 };
 
 
+typedef struct {
+  gchar *filein;
+  gchar *gfileout;
+  gint width;
+  gint height;
+  gint resize_mode;
+} NimResizeInfo;
+
+
 GType nim_resize_dialog_get_type (void);
 
 GtkWidget *nim_resize_dialog_new (GtkWindow *parent_window, GList *filelist);
-
+void       nim_resize_function (NimResizeInfo *info);
 
 G_END_DECLS
 

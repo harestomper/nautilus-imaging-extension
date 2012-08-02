@@ -47,6 +47,7 @@ struct _NimMainDialogPrivate
 
   gint active_function;
   gint active_save_mode;
+  GList *filelist;
 };
 //------------------------------------------------------------------------------
 
@@ -98,7 +99,7 @@ static void radio_data_free (gpointer uptr)
 
 
 //------------------------------------------------------------------------------
-GtkWidget *nim_main_dialog_new (void)
+GtkWidget *nim_main_dialog_new (GtkWindow *parent_window, GList *filelist)
 {
   NimMainDialog *this;
   NimMainDialogPrivate *priv;
@@ -123,6 +124,7 @@ GtkWidget *nim_main_dialog_new (void)
   priv = this->priv;
   group = gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL);
   mainbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
+  priv->filelist = filelist;
 
   /* Frame of selector */
   priv->combo = gtk_combo_box_text_new ();
@@ -268,8 +270,11 @@ GtkWidget *nim_main_dialog_new (void)
   gtk_dialog_add_button (GTK_DIALOG (this), GTK_STOCK_CLOSE, GTK_RESPONSE_CLOSE);
   gtk_dialog_add_button (GTK_DIALOG (this), GTK_STOCK_APPLY, GTK_RESPONSE_APPLY);
   g_signal_connect (this, "response", G_CALLBACK (response_cb), NULL);
+
+  if (parent_window)
+    gtk_window_set_transient_for (GTK_WINDOW (this), parent_window);
+    
   gtk_widget_show_all (mainbox);
-  
 
   g_free (text);
   g_free (foldername);
