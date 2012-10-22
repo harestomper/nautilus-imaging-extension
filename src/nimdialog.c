@@ -37,6 +37,7 @@ struct _NimDialogPrivate
 {
   GtkBuilder *builder;
   gint        dialog_type;
+  MagickWand *preview_wand;
 };
 //------------------------------------------------------------------------------
 
@@ -68,11 +69,14 @@ static void nim_dialog_class_init (NimDialogClass *klass)
 //------------------------------------------------------------------------------
 static void nim_dialog_finalize (GObject *object)
 {
-//  NimDialog *self;
+  NimDialog *self;
 
   g_return_if_fail (NIM_IS_DIALOG (object));
 
-//  self = NIM_DIALOG (object);
+  self = NIM_DIALOG (object);
+
+  if (IsMagickWand (self->priv->preview_wand))
+    self->priv->preview_wand = DestroyMagickWand (self->priv->preview_wand);
 
   G_OBJECT_CLASS (nim_dialog_parent_class)->finalize (object);
 }
@@ -469,10 +473,23 @@ static gboolean _effect_widget_value_changed (NimDialog *this)
   gdouble offx, offy, radius, sigma, efftype;
 
   priv = this->priv;
-  filename = nim_imaging_get_path_to_test_image (NIM_FIND_IMAGE);
 
-  if (filename == NULL)
-    return FALSE;
+  if (!IsMagickWand (priv->preview_wand)) {
+    gboolean result;
+    filename = nim_imaging_get_path_to_test_image (NIM_FIND_IMAGE);
+    
+    if (filename == NULL)
+      return FALSE;
+
+    priv->preview_wand = NewMagickWand ();
+    result = MagickReadImage (priv->preview_wand, filename) == MagickTrue;
+    g_free (filename);
+
+    if (!result) {
+      priv->preview_wand = DestroyMagickWand (priv->preview_wand);
+      return FALSE;
+    }
+  }
     
   image = (GtkWidget *) gtk_builder_get_object (priv->builder, "effect_preview_image");
   background = (GtkWidget *) gtk_builder_get_object (priv->builder, "effect_enable_bg_button");
@@ -489,7 +506,14 @@ static gboolean _effect_widget_value_changed (NimDialog *this)
   efftype = gtk_combo_box_get_active (GTK_COMBO_BOX (effect_type));
   enable_bg = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (background));
   sigma = efftype == NIM_EFFECT_SHADOW ? ceil (radius / 2.0) : sigma;
-  wand = nim_imaging_effect (filename, efftype, offx, offy, radius, sigma, enable_bg);
+
+  if (IsMagickWand (priv->preview_wand)) {
+    wand = CloneMagickWand (priv->preview_wand);
+    nim_imaging_effect_from_wand (&wand, efftype, offx, offy, radius, sigma, enable_bg);
+  } else {
+    return FALSE;
+  }
+
   pixbuf = nim_imaging_convert_wand_to_pixbuf (wand);
 
   if (pixbuf) {
@@ -499,9 +523,6 @@ static gboolean _effect_widget_value_changed (NimDialog *this)
 
   if (IsMagickWand (wand))
     wand = DestroyMagickWand (wand);
-
-  if (filename)
-    g_free (filename);
 
   return FALSE;
 }
@@ -562,6 +583,7 @@ NimDialog* nim_dialog_new (GtkWindow* parent_window, gint dialog_type)
   object = g_object_new (NIM_TYPE_DIALOG, NULL);
   this = NIM_DIALOG (object);
   priv = this->priv;
+  priv->preview_wand = NULL;
 
   priv->dialog_type = dialog_type;
   priv->builder = gtk_builder_new ();

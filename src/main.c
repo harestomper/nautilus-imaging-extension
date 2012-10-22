@@ -38,6 +38,7 @@ int main (int argc, char **argv)
     
   gdk_threads_init ();
   gdk_threads_enter ();
+  MagickWandGenesis ();
   
   gtk_init (&argc, &argv);
   NimDialog *dialog;
@@ -50,5 +51,6 @@ int main (int argc, char **argv)
   nim_dialog_run (dialog);
 
   gdk_threads_leave ();
+  MagickWandTerminus ();
   return 0;
 }

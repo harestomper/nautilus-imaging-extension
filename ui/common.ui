@@ -1,9 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <!-- interface-requires gtk+ 3.0 -->
-  <object class="GtkAdjustment" id="angle_adj">
-    <property name="upper">359</property>
-    <property name="value">90</property>
+  <object class="GtkAdjustment" id="effect_offsety_adj">
+    <property name="lower">-50</property>
+    <property name="upper">50</property>
+    <property name="value">8</property>
+    <property name="step_increment">1</property>
+    <property name="page_increment">10</property>
+  </object>
+  <object class="GtkAdjustment" id="effect_radius_adj">
+    <property name="lower">1</property>
+    <property name="upper">100</property>
+    <property name="value">10</property>
+    <property name="step_increment">1</property>
+    <property name="page_increment">10</property>
+  </object>
+  <object class="GtkAdjustment" id="effect_sigma_adj">
+    <property name="upper">100</property>
+    <property name="value">3</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
@@ -11,6 +25,19 @@
     <property name="lower">20</property>
     <property name="upper">5000</property>
     <property name="value">100</property>
+    <property name="step_increment">1</property>
+    <property name="page_increment">10</property>
+  </object>
+  <object class="GtkAdjustment" id="angle_adj">
+    <property name="upper">359</property>
+    <property name="value">90</property>
+    <property name="step_increment">1</property>
+    <property name="page_increment">10</property>
+  </object>
+  <object class="GtkAdjustment" id="height_adj">
+    <property name="lower">50</property>
+    <property name="upper">10000</property>
+    <property name="value">800</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
@@ -1036,7 +1063,7 @@
                                                 <property name="receives_default">True</property>
                                                 <property name="use_action_appearance">False</property>
                                                 <property name="font">Sans 12</property>
-                                                <property name="preview_text"></property>
+                                                <property name="preview_text"/>
                                                 <property name="show_preview_entry">False</property>
                                               </object>
                                               <packing>
@@ -2046,30 +2073,9 @@
       <action-widget response="0">button1</action-widget>
     </action-widgets>
   </object>
-  <object class="GtkAdjustment" id="effect_offsetx_adj">
-    <property name="lower">-50</property>
-    <property name="upper">50</property>
-    <property name="value">8</property>
-    <property name="step_increment">1</property>
-    <property name="page_increment">10</property>
-  </object>
-  <object class="GtkAdjustment" id="effect_offsety_adj">
-    <property name="lower">-50</property>
-    <property name="upper">50</property>
-    <property name="value">8</property>
-    <property name="step_increment">1</property>
-    <property name="page_increment">10</property>
-  </object>
-  <object class="GtkAdjustment" id="effect_radius_adj">
-    <property name="lower">1</property>
+  <object class="GtkAdjustment" id="quality_adj">
     <property name="upper">100</property>
-    <property name="value">10</property>
-    <property name="step_increment">1</property>
-    <property name="page_increment">10</property>
-  </object>
-  <object class="GtkAdjustment" id="effect_sigma_adj">
-    <property name="upper">100</property>
-    <property name="value">3</property>
+    <property name="value">90</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
@@ -2117,6 +2123,13 @@
       <widget name="effect_type_combo"/>
     </widgets>
   </object>
+  <object class="GtkAdjustment" id="effect_offsetx_adj">
+    <property name="lower">-50</property>
+    <property name="upper">50</property>
+    <property name="value">8</property>
+    <property name="step_increment">1</property>
+    <property name="page_increment">10</property>
+  </object>
   <object class="GtkSizeGroup" id="entrysizegroup">
     <property name="mode">vertical</property>
     <widgets>
@@ -2124,19 +2137,6 @@
       <widget name="save_suffix_entry"/>
       <widget name="save_choose_button"/>
     </widgets>
-  </object>
-  <object class="GtkAdjustment" id="height_adj">
-    <property name="lower">50</property>
-    <property name="upper">10000</property>
-    <property name="value">800</property>
-    <property name="step_increment">1</property>
-    <property name="page_increment">10</property>
-  </object>
-  <object class="GtkAdjustment" id="quality_adj">
-    <property name="upper">100</property>
-    <property name="value">90</property>
-    <property name="step_increment">1</property>
-    <property name="page_increment">10</property>
   </object>
   <object class="GtkSizeGroup" id="spinsizegroup">
     <widgets>
