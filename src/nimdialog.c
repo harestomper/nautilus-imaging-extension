@@ -20,6 +20,7 @@
  */
 
 #include <gtk/gtk.h>
+#include <math.h>
 
 #include "nimdialog.h"
 #include "nimimaging.h"
@@ -450,6 +451,94 @@ static void nim_dialog_round_spins_init (NimDialog *this)
 
 
 //------------------------------------------------------------------------------
+static void effect_widget_value_changed (GtkWidget *widget, NimDialog *this)
+{
+  gchar *filename;
+  NimDialogPrivate *priv;
+
+  GtkWidget *background;
+  GtkWidget *offx_spin;
+  GtkWidget *offy_spin;
+  GtkWidget *radius_spin;
+  GtkWidget *sigma_spin;
+  GtkWidget *effect_type;
+  GtkWidget *image;
+  GdkPixbuf *pixbuf;
+  MagickWand *wand;
+  gboolean enable_bg;
+  gdouble offx, offy, radius, sigma, efftype;
+
+  priv = this->priv;
+  filename = nim_imaging_get_path_to_test_image (NIM_FIND_IMAGE);
+
+  if (filename == NULL)
+    return;
+    
+  image = (GtkWidget *) gtk_builder_get_object (priv->builder, "effect_preview_image");
+  background = (GtkWidget *) gtk_builder_get_object (priv->builder, "effect_enable_bg_button");
+  offx_spin = (GtkWidget *) gtk_builder_get_object (priv->builder, "effect_offsetx_spin");
+  offy_spin = (GtkWidget *) gtk_builder_get_object (priv->builder, "effect_offsety_spin");
+  radius_spin = (GtkWidget *) gtk_builder_get_object (priv->builder, "effect_radius_spin");
+  sigma_spin = (GtkWidget *) gtk_builder_get_object (priv->builder, "effect_sigma_spin");
+  effect_type = (GtkWidget *) gtk_builder_get_object (priv->builder, "effect_type_combo");
+
+  offx = gtk_spin_button_get_value (GTK_SPIN_BUTTON (offx_spin));
+  offy = gtk_spin_button_get_value (GTK_SPIN_BUTTON (offy_spin));
+  radius = gtk_spin_button_get_value (GTK_SPIN_BUTTON (radius_spin));
+  sigma = gtk_spin_button_get_value (GTK_SPIN_BUTTON (sigma_spin));
+  efftype = gtk_combo_box_get_active (GTK_COMBO_BOX (effect_type));
+  enable_bg = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (background));
+  sigma = efftype == NIM_EFFECT_SHADOW ? ceil (radius / 2.0) : sigma;
+  wand = nim_imaging_effect (filename, efftype, offx, offy, radius, sigma, enable_bg);
+  pixbuf = nim_imaging_convert_wand_to_pixbuf (wand);
+
+  if (pixbuf) {
+    gtk_image_set_from_pixbuf (GTK_IMAGE (image), pixbuf);
+    g_object_unref (G_OBJECT (pixbuf));
+  }
+
+  if (IsMagickWand (wand))
+    wand = DestroyMagickWand (wand);
+
+  if (filename)
+    g_free (filename);
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+static void nim_dialog_effects_init (NimDialog *this)
+{
+  NimDialogPrivate *priv;
+  GObject *background;
+  GObject *offx_spin;
+  GObject *offy_spin;
+  GObject *radius_spin;
+  GObject *sigma_spin;
+  GObject *effect_type;
+
+  priv = this->priv;
+
+  background = gtk_builder_get_object (priv->builder, "effect_enable_bg_button");
+  offx_spin = gtk_builder_get_object (priv->builder, "effect_offsetx_spin");
+  offy_spin = gtk_builder_get_object (priv->builder, "effect_offsety_spin");
+  radius_spin = gtk_builder_get_object (priv->builder, "effect_radius_spin");
+  sigma_spin = gtk_builder_get_object (priv->builder, "effect_sigma_spin");
+  effect_type = gtk_builder_get_object (priv->builder, "effect_type_combo");
+
+  g_signal_connect (background, "toggled", G_CALLBACK (effect_widget_value_changed), this);
+  g_signal_connect (offx_spin, "value-changed", G_CALLBACK (effect_widget_value_changed), this);
+  g_signal_connect (offy_spin, "value-changed", G_CALLBACK (effect_widget_value_changed), this);
+  g_signal_connect (radius_spin, "value-changed", G_CALLBACK (effect_widget_value_changed), this);
+  g_signal_connect (sigma_spin, "value-changed", G_CALLBACK (effect_widget_value_changed), this);
+  g_signal_connect (effect_type, "changed", G_CALLBACK (effect_widget_value_changed), this);
+
+  effect_widget_value_changed (NULL, this);
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
 NimDialog* nim_dialog_new (GtkWindow* parent_window, gint dialog_type)
 {
   NimDialog *this;
@@ -503,6 +592,7 @@ NimDialog* nim_dialog_new (GtkWindow* parent_window, gint dialog_type)
 
   nim_dialog_radio_init (this);
   nim_dialog_round_spins_init (this);
+  nim_dialog_effects_init (this);
   
   return this;
 }

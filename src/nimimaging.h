@@ -28,6 +28,18 @@
 G_BEGIN_DECLS
 
 enum {
+  NIM_FUNCTION_ROTATE,
+  NIM_FUNCTION_RESIZE,
+  NIM_FUNCTION_CONVERT,
+  NIM_FUNCTION_MARK,
+  NIM_FUNCTION_THUMB,
+  NIM_FUNCTION_CORNERS,
+  NIM_FUNCTION_EFFECTS,
+  NIM_FUNCTION_LAST
+};
+
+
+enum {
     NIM_CORNER_TL,
     NIM_CORNER_TR,
     NIM_CORNER_BR,
@@ -35,11 +47,45 @@ enum {
     NIM_CORNER_LAST
 };
 
+enum {
+  NIM_EFFECT_SHADOW,
+  NIM_EFFECT_BLUR,
+  NIM_EFFECT_SHARPEN
+};
 
-MagickWand* nim_imaging_round_corners (gchar *filename, const gdouble corners [NIM_CORNER_LAST]);
-GdkPixbuf*  nim_imaging_convert_wand_to_pixbuf (MagickWand *wand);
-gboolean    nim_imaging_convert_to_gif (gchar **filelist, int n_elem, gint delay, gboolean combine);
-gchar*      nim_imaging_get_path_to_test_image (int tp);
+enum {
+  NIM_FIND_IMAGE,
+  NIM_FIND_UI
+};  
+
+MagickWand* nim_imaging_round_corners           (gchar *filename, const gdouble corners [NIM_CORNER_LAST]);
+
+gboolean    nim_imaging_round_corners_from_wand (MagickWand **wand, const gdouble corners [NIM_CORNER_LAST]);
+
+GdkPixbuf*  nim_imaging_convert_wand_to_pixbuf  (MagickWand *wand);
+
+MagickWand* nim_imaging_effect                  (gchar     *filename,
+                                                 gint         effect,
+                                                 gdouble       off_x,
+                                                 gdouble       off_y,
+                                                 gdouble      radius,
+                                                 gdouble       sigma,
+                                                 gboolean enable_bg);
+
+gboolean nim_imaging_effect_from_wand           (MagickWand    **wand,
+                                                  gint         effect,
+                                                  gdouble        offx,
+                                                  gdouble        offy,
+                                                  gdouble      radius,
+                                                  gdouble       sigma,
+                                                  gboolean enable_bg);
+
+gboolean    nim_imaging_convert_to_gif          (gchar  **filelist,
+                                                 int        n_elem,
+                                                 gint        delay,
+                                                 gboolean combine);
+
+gchar*      nim_imaging_get_path_to_test_image  (int tp);
 
 
 

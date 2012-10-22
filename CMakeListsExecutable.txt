@@ -51,7 +51,9 @@ include_directories(
 #
 # Set sources for compiling
 ##
-FILE (GLOB SOURCES ${CMAKE_SOURCE_DIR}/src/*.c)
+FILE (GLOB SOURCES ${CMAKE_SOURCE_DIR}/src/nimdialog.c
+                   ${CMAKE_SOURCE_DIR}/src/nimimaging.c
+                   ${CMAKE_SOURCE_DIR}/src/main.c)
 message (STATUS ${SOURCES})
 #
 # Set config.h

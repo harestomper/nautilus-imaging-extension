@@ -63,16 +63,6 @@ gboolean  nim_imaging_convert_to_gif (gchar **filelist, int n_elem, gint delay, 
 
 
 //------------------------------------------------------------------------------
-/*
-static void window_destroy_cb (GtkWidget *widget)
-{
-  gtk_main_quit ();
-}
-*/
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
 GdkPixbuf *nim_imaging_convert_wand_to_pixbuf (MagickWand *wand)
 {
   GdkPixbuf *pixbuf = NULL;
@@ -112,31 +102,89 @@ GdkPixbuf *nim_imaging_convert_wand_to_pixbuf (MagickWand *wand)
 
 
 //------------------------------------------------------------------------------
-/*
-static void show_image (MagickWand *wand)
-{
-  GdkPixbuf *pixbuf;
-  GtkWidget *image;
-  GtkWidget *window;
-
-  if ((pixbuf = nim_imaging_convert_wand_to_pixbuf (wand)) != NULL)
-  {
-    image = gtk_image_new_from_pixbuf (pixbuf);
-    window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-    gtk_container_add (GTK_CONTAINER (window), image);
-    gtk_widget_show_all (window);
-    g_signal_connect (window, "destroy", G_CALLBACK (window_destroy_cb), NULL);
-
-    g_object_unref (G_OBJECT (pixbuf));
-    gtk_main ();
-  }
-}
-*/
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
 #define CLAMP_RADIUS(w, h, r) ceil (((MIN (w, h) / 2) < ABS (r) ? MIN (w, h) / 2.0 : ABS (r)))
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+gboolean nim_imaging_round_corners_from_wand (MagickWand **wand, const gdouble corners [NIM_CORNER_LAST])
+{
+  gboolean response = FALSE;
+  MagickWand *result_wand = NULL;
+  PixelWand *pixel_wand = NULL;
+  DrawingWand *draw_wand = NULL;
+  gdouble width, height;
+  gdouble x, y;
+  gdouble ctl, cbl, ctr, cbr;
+
+  if (IsMagickWand (*wand) == MagickFalse) {
+    return FALSE;
+  }
+
+  result_wand = NewMagickWand ();
+  pixel_wand = NewPixelWand ();
+  draw_wand = NewDrawingWand ();
+
+  width = MagickGetImageWidth (*wand) - 1;
+  height =  MagickGetImageHeight (*wand) - 1;
+
+  if (width > 1 && height > 1)
+  {
+    ctl = CLAMP_RADIUS (width, height, corners [NIM_CORNER_TL]);
+    cbl = CLAMP_RADIUS (width, height, corners [NIM_CORNER_BL]);
+    ctr = CLAMP_RADIUS (width, height, corners [NIM_CORNER_TR]);
+    cbr = CLAMP_RADIUS (width, height, corners [NIM_CORNER_BR]);
+
+    PixelSetColor (pixel_wand, "none");
+    MagickNewImage (result_wand, width + 2, height + 2, pixel_wand);
+
+    PixelSetColor (pixel_wand, "white");
+    DrawSetFillColor (draw_wand, pixel_wand);
+
+    DrawPathStart (draw_wand);
+    DrawPathMoveToAbsolute (draw_wand, ctl, 0);
+    DrawPathLineToAbsolute (draw_wand, width - ctr, 0.0);
+    x = corners [NIM_CORNER_TR] >= 0 ? width : width - ctr;
+    y = corners [NIM_CORNER_TR] >= 0 ? 0.0 : ctr;
+
+    DrawPathCurveToQuadraticBezierAbsolute (draw_wand, x, y, width, ctr);
+    DrawPathLineToAbsolute (draw_wand, width, height - cbr);
+    x = corners [NIM_CORNER_BR] >= 0 ? width : width - cbr;
+    y = corners [NIM_CORNER_BR] >= 0 ? height : height - cbr;
+
+    DrawPathCurveToQuadraticBezierAbsolute (draw_wand, x, y, width - cbr, height);
+    DrawPathLineToAbsolute (draw_wand, cbl, height);
+    x = corners [NIM_CORNER_BL] >= 0 ? 0.0 : cbl;
+    y = corners [NIM_CORNER_BL] >= 0 ? height : height - cbl;
+  
+    DrawPathCurveToQuadraticBezierAbsolute (draw_wand, x, y, 0.0, height - cbl);
+    DrawPathLineToAbsolute (draw_wand, 0.0, ctl);
+    x = corners [NIM_CORNER_TL] >= 0 ? 0.0 : ctl;
+    y = corners [NIM_CORNER_TL] >= 0 ? 0.0 : ctl;
+  
+    DrawPathCurveToQuadraticBezierAbsolute (draw_wand, x, y, ctl, 0.0);
+    DrawPathClose (draw_wand);
+    DrawPathFinish (draw_wand);
+
+    MagickDrawImage (result_wand, draw_wand);
+    response = MagickCompositeImage (result_wand, *wand, InCompositeOp, 0, 0) == MagickTrue;
+  }
+
+  if (response) {
+    *wand = DestroyMagickWand (*wand);
+    *wand = result_wand;
+  } else {
+    result_wand = DestroyMagickWand (result_wand);
+  }
+
+  if (draw_wand)
+    DestroyDrawingWand (draw_wand);
+
+  if (pixel_wand)
+    DestroyPixelWand (pixel_wand);
+
+  return response;
+}
 //------------------------------------------------------------------------------
 
 
@@ -144,82 +192,126 @@ static void show_image (MagickWand *wand)
 MagickWand* nim_imaging_round_corners (gchar *filename, const gdouble corners [NIM_CORNER_LAST])
 {
   gboolean response = FALSE;
-  MagickWand *m_wand = NULL;
-  MagickWand *l_wand = NULL;
-  PixelWand *p_wand = NULL;
-  DrawingWand *d_wand = NULL;
-  gdouble width, height;
-  gdouble x, y;
-  gdouble ctl, cbl, ctr, cbr;
+  MagickWand *image_wand = NULL;
 
-  m_wand = NewMagickWand ();
-  l_wand = NewMagickWand ();
-  p_wand = NewPixelWand ();
-  d_wand = NewDrawingWand ();
-
-  if (MagickReadImage (l_wand, filename) == MagickTrue)
+  image_wand = NewMagickWand ();
+  
+  if (MagickReadImage (image_wand, filename) == MagickTrue)
   {
-    width = MagickGetImageWidth (l_wand) - 1;
-    height =  MagickGetImageHeight (l_wand) - 1;
+    nim_imaging_round_corners_from_wand (&image_wand, corners);
+    return image_wand;
+  }
 
-    if (width > 1 && height > 1)
-    {
-      ctl = CLAMP_RADIUS (width, height, corners [NIM_CORNER_TL]);
-      cbl = CLAMP_RADIUS (width, height, corners [NIM_CORNER_BL]);
-      ctr = CLAMP_RADIUS (width, height, corners [NIM_CORNER_TR]);
-      cbr = CLAMP_RADIUS (width, height, corners [NIM_CORNER_BR]);
+  if (image_wand)
+    image_wand = DestroyMagickWand (image_wand);
 
-      PixelSetColor (p_wand, "none");
-      MagickNewImage (m_wand, width + 2, height + 2, p_wand);
+  return NULL;
+}
+//------------------------------------------------------------------------------
 
-      PixelSetColor (p_wand, "white");
-      DrawSetFillColor (d_wand, p_wand);
 
-      DrawPathStart (d_wand);
-      DrawPathMoveToAbsolute (d_wand, ctl, 0);
-      DrawPathLineToAbsolute (d_wand, width - ctr, 0.0);
-      x = corners [NIM_CORNER_TR] >= 0 ? width : width - ctr;
-      y = corners [NIM_CORNER_TR] >= 0 ? 0.0 : ctr;
+//------------------------------------------------------------------------------
+gboolean nim_imaging_effect_from_wand (MagickWand   **wand,
+                                        gint        effect,
+                                        gdouble       offx,
+                                        gdouble       offy,
+                                        gdouble     radius,
+                                        gdouble      sigma,
+                                        gboolean enable_bg)
+{
+  gboolean response = FALSE;
+  MagickWand *result_wand;
+  PixelWand *shadow_color;
+  PixelWand *bg_color;
+  gdouble im_width, im_height, sh_width, sh_height;
 
-      DrawPathCurveToQuadraticBezierAbsolute (d_wand, x, y, width, ctr);
-      DrawPathLineToAbsolute (d_wand, width, height - cbr);
-      x = corners [NIM_CORNER_BR] >= 0 ? width : width - cbr;
-      y = corners [NIM_CORNER_BR] >= 0 ? height : height - cbr;
+  if (IsMagickWand (*wand) == MagickFalse) {
+    return FALSE;
+  }
 
-      DrawPathCurveToQuadraticBezierAbsolute (d_wand, x, y, width - cbr, height);
-      DrawPathLineToAbsolute (d_wand, cbl, height);
-      x = corners [NIM_CORNER_BL] >= 0 ? 0.0 : cbl;
-      y = corners [NIM_CORNER_BL] >= 0 ? height : height - cbl;
-    
-      DrawPathCurveToQuadraticBezierAbsolute (d_wand, x, y, 0.0, height - cbl);
-      DrawPathLineToAbsolute (d_wand, 0.0, ctl);
-      x = corners [NIM_CORNER_TL] >= 0 ? 0.0 : ctl;
-      y = corners [NIM_CORNER_TL] >= 0 ? 0.0 : ctl;
-    
-      DrawPathCurveToQuadraticBezierAbsolute (d_wand, x, y, ctl, 0.0);
-      DrawPathClose (d_wand);
-      DrawPathFinish (d_wand);
+  result_wand = CloneMagickWand (*wand);
 
-      MagickDrawImage (m_wand, d_wand);
-      response = MagickCompositeImage (m_wand, l_wand, InCompositeOp, 0, 0) == MagickTrue;
-    }
+  switch (effect) {
+
+    case NIM_EFFECT_BLUR:
+      response = MagickAdaptiveBlurImage (result_wand, radius, sigma) == MagickTrue;
+      break;
+
+    case NIM_EFFECT_SHARPEN:
+      response = MagickSharpenImage (result_wand, radius, sigma) == MagickTrue;
+      break;
+
+    case NIM_EFFECT_SHADOW:
+    default:
+      shadow_color = NewPixelWand ();
+      bg_color = NewPixelWand ();
+      PixelSetColor (shadow_color, "black");
+      PixelSetColor (bg_color, "white");
+
+      MagickSetImageBackgroundColor (result_wand, shadow_color);
+      MagickShadowImage (result_wand, 80.0, sigma, offx, offy);
+      MagickAddImage (result_wand, *wand);
+      MagickResetIterator (result_wand);
+
+//      if (enable_bg)
+        MagickSetImageBackgroundColor (result_wand, bg_color);
+
+      sh_width = MagickGetImageWidth (result_wand);
+      sh_height = MagickGetImageHeight (result_wand);
+      im_width = MagickGetImageWidth (*wand);
+      im_height = MagickGetImageHeight (*wand);
+
+      response = MagickCompositeImage (result_wand,
+                                *wand,
+                                OverCompositeOp,
+                                (sh_width - im_width) / 2 - offx,
+                                (sh_height - im_height) / 2 - offy) ==  MagickTrue;
+
+      if (IsPixelWand (shadow_color))
+        DestroyPixelWand (shadow_color);
+
+      if (IsPixelWand (bg_color))
+        DestroyPixelWand (bg_color);
+
+      break;
   }
   
-  if (l_wand)
-    DestroyMagickWand (l_wand);
-
-  if (d_wand)
-    DestroyDrawingWand (d_wand);
-
-  if (p_wand)
-    DestroyPixelWand (p_wand);
-
-  if (!response && m_wand) {
-    DestroyMagickWand (m_wand);
-    m_wand = NULL;
+  if (response) {
+    *wand = DestroyMagickWand (*wand);
+    *wand = result_wand;
+  } else if (result_wand) {
+    result_wand = DestroyMagickWand (result_wand);
   }
 
-  return m_wand;
+  return response;
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+MagickWand* nim_imaging_effect  (gchar     *filename,
+                                 gint         effect,
+                                 gdouble       off_x,
+                                 gdouble       off_y,
+                                 gdouble      radius,
+                                 gdouble       sigma,
+                                 gboolean  enable_bg)
+{
+  MagickWand *image_wand;
+  MagickWand *result_wand;
+
+  image_wand = NewMagickWand ();
+
+  if (MagickReadImage (image_wand, filename) == MagickTrue)
+  {
+    nim_imaging_effect_from_wand (&image_wand, effect, off_x, off_y, radius, sigma, enable_bg);
+    return image_wand;
+  }
+
+  if (image_wand)
+    image_wand = DestroyMagickWand (image_wand);
+
+  return NULL;
 }
 //------------------------------------------------------------------------------
 
@@ -258,30 +350,6 @@ gchar* nim_imaging_get_path_to_test_image (int tp)
 
   return result;
 }
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
-//int main(int argc, char **argv)
-//{
-//  MagickWand *wand;
-//  gdouble corners [NIM_CORNER_LAST] = {-30.0, 15.0, -30.0, 15.0};
-
-//  MagickWandGenesis ();
-
-//  gtk_init (&argc, &argv);
-
-//  if ((wand = nim_imaging_round_corners (argv [1], corners)) != NULL)
-//  {
-//    show_image (wand);
-//    wand = DestroyMagickWand (wand);
-////      MagickWriteImage (m_wand, "mask_result.png");
-//  }
-
-//  MagickWandTerminus ();
-
-//  return 0;
-//}
 //------------------------------------------------------------------------------
 
 

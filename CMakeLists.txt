@@ -57,7 +57,10 @@ file (GLOB _translations ${CMAKE_SOURCE_DIR}/po/*.po)
 #
 # Set sources for compiling
 ##
-FILE (GLOB SOURCES ${CMAKE_SOURCE_DIR}/src/*.c)
+FILE (GLOB SOURCES ${CMAKE_SOURCE_DIR}/src/nimdialog.c
+                   ${CMAKE_SOURCE_DIR}/src/nimimaging.c
+                   ${CMAKE_SOURCE_DIR}/src/main.c)
+
 message (STATUS ${SOURCES})
 #
 # Set config.h
@@ -69,7 +72,8 @@ set (CMAKE_C_FLAGS "-include config.h")
 # Build shared library
 ##
 
-add_library (${PROJECT}  SHARED ${SOURCES})
+# add_library (${PROJECT}  SHARED ${SOURCES})
+add_executable (${PROJECT} ${SOURCES})
 
 target_link_libraries(${PROJECT}
                     ${GTK_LIBRARIES}

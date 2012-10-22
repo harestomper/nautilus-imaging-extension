@@ -250,65 +250,101 @@ MagickWand* nim_imaging_round_corners (gchar *filename, const gdouble corners [N
 
 
 //------------------------------------------------------------------------------
-gboolean nim_imaging_effect_shadow_from_wand (MagickWand **wand, gdouble offx, gdouble offy, gdouble sigma)
+enum {
+  NIM_EFFECT_SHADOW,
+  NIM_EFFECT_BLUR,
+  NIM_EFFECT_SHARPEN
+};
+  
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+gboolean nim_imaging_effect_from_wand (MagickWand   **wand,
+                                        gint        effect,
+                                        gdouble       offx,
+                                        gdouble       offy,
+                                        gdouble     radius,
+                                        gdouble      sigma,
+                                        gboolean enable_bg)
 {
   gboolean response = FALSE;
   MagickWand *result_wand;
   PixelWand *shadow_color;
   PixelWand *bg_color;
-//  DrawingWand *draw_wand;
   gdouble im_width, im_height, sh_width, sh_height;
 
   if (IsMagickWand (*wand) == MagickFalse) {
     return FALSE;
   }
 
-  shadow_color = NewPixelWand ();
-  bg_color = NewPixelWand ();
-  PixelSetColor (shadow_color, "black");
-  PixelSetColor (bg_color, "white");
   result_wand = CloneMagickWand (*wand);
 
-  MagickSetImageBackgroundColor (result_wand, shadow_color);
-  MagickShadowImage (result_wand, 80.0, sigma, 0.0, 0.0);
-  MagickAddImage (result_wand, *wand);
-  MagickResetIterator (result_wand);
-  MagickSetImageBackgroundColor (result_wand, bg_color);
+  switch (effect) {
 
-  sh_width = MagickGetImageWidth (result_wand);
-  sh_height = MagickGetImageHeight (result_wand);
-  im_width = MagickGetImageWidth (*wand);
-  im_height = MagickGetImageHeight (*wand);
+    case NIM_EFFECT_BLUR:
+      response = MagickAdaptiveBlurImage (result_wand, radius, sigma) == MagickTrue;
+      break;
 
-  if (MagickCompositeImage (result_wand,
-                            *wand,
-                            OverCompositeOp,
-                            (sh_width - im_width) / 2 - offx,
-                            (sh_height - im_height) / 2 - offy) ==  MagickTrue)
-  {
+    case NIM_EFFECT_SHARPEN:
+      response = MagickSharpenImage (result_wand, radius, sigma) == MagickTrue;
+      break;
+
+    case NIM_EFFECT_SHADOW:
+    default:
+      shadow_color = NewPixelWand ();
+      bg_color = NewPixelWand ();
+      PixelSetColor (shadow_color, "black");
+      PixelSetColor (bg_color, "white");
+
+      MagickSetImageBackgroundColor (result_wand, shadow_color);
+      MagickShadowImage (result_wand, 80.0, sigma, 0.0, 0.0);
+      MagickAddImage (result_wand, *wand);
+      MagickResetIterator (result_wand);
+
+      if (enable_bg)
+        MagickSetImageBackgroundColor (result_wand, bg_color);
+
+      sh_width = MagickGetImageWidth (result_wand);
+      sh_height = MagickGetImageHeight (result_wand);
+      im_width = MagickGetImageWidth (*wand);
+      im_height = MagickGetImageHeight (*wand);
+
+      response = MagickCompositeImage (result_wand,
+                                *wand,
+                                OverCompositeOp,
+                                (sh_width - im_width) / 2 - offx,
+                                (sh_height - im_height) / 2 - offy) ==  MagickTrue;
+
+      if (IsPixelWand (shadow_color))
+        DestroyPixelWand (shadow_color);
+
+      if (IsPixelWand (bg_color))
+        DestroyPixelWand (bg_color);
+
+      break;
+  }
+  
+  if (response) {
     *wand = DestroyMagickWand (*wand);
     *wand = result_wand;
-    response = TRUE;
   } else if (result_wand) {
     result_wand = DestroyMagickWand (result_wand);
   }
 
-  if (shadow_color)
-    DestroyPixelWand (shadow_color);
-
-  if (bg_color)
-    DestroyPixelWand (bg_color);
-    
   return response;
 }
 //------------------------------------------------------------------------------
 
 
 //------------------------------------------------------------------------------
-MagickWand* nim_imaging_effect_shadow (gchar *filename,
-                                       gdouble off_x,
-                                       gdouble off_y,
-                                       gdouble sigma)
+MagickWand* nim_imaging_effect  (gchar     *filename,
+                                 gint         effect,
+                                 gdouble       off_x,
+                                 gdouble       off_y,
+                                 gdouble      radius,
+                                 gdouble       sigma,
+                                 gboolean  enable_bg)
 {
   MagickWand *image_wand;
   MagickWand *result_wand;
@@ -317,7 +353,7 @@ MagickWand* nim_imaging_effect_shadow (gchar *filename,
 
   if (MagickReadImage (image_wand, filename) == MagickTrue)
   {
-    nim_imaging_effect_shadow_from_wand (&image_wand, off_x, off_y, sigma);
+    nim_imaging_effect_from_wand (&image_wand, effect, off_x, off_y, radius, sigma, enable_bg);
     return image_wand;
   }
 
@@ -326,6 +362,12 @@ MagickWand* nim_imaging_effect_shadow (gchar *filename,
 
   return NULL;
 }
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+
+
 
 int main(int argc, char **argv)
 {
@@ -338,9 +380,9 @@ int main(int argc, char **argv)
 
   if ((wand = nim_imaging_round_corners (argv [1], corners)) != NULL) 
   {
-    nim_imaging_effect_shadow_from_wand (&wand, 8, 8, 6.0);
+    nim_imaging_effect_from_wand (&wand, NIM_EFFECT_SHADOW, 0, 0, 12.0, 6.0, FALSE);
     show_image (wand);
-    MagickWriteImage (wand, "mask_result.tiff");
+    MagickWriteImage (wand, "mask_result-sharpen.png");
     wand = DestroyMagickWand (wand);
   }
 
