@@ -451,7 +451,7 @@ static void nim_dialog_round_spins_init (NimDialog *this)
 
 
 //------------------------------------------------------------------------------
-static void effect_widget_value_changed (GtkWidget *widget, NimDialog *this)
+static gboolean _effect_widget_value_changed (NimDialog *this)
 {
   gchar *filename;
   NimDialogPrivate *priv;
@@ -472,7 +472,7 @@ static void effect_widget_value_changed (GtkWidget *widget, NimDialog *this)
   filename = nim_imaging_get_path_to_test_image (NIM_FIND_IMAGE);
 
   if (filename == NULL)
-    return;
+    return FALSE;
     
   image = (GtkWidget *) gtk_builder_get_object (priv->builder, "effect_preview_image");
   background = (GtkWidget *) gtk_builder_get_object (priv->builder, "effect_enable_bg_button");
@@ -502,6 +502,16 @@ static void effect_widget_value_changed (GtkWidget *widget, NimDialog *this)
 
   if (filename)
     g_free (filename);
+
+  return FALSE;
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+static void effect_widget_value_changed (GtkWidget *widget, NimDialog *this)
+{
+  g_idle_add ((GSourceFunc) _effect_widget_value_changed, this);
 }
 //------------------------------------------------------------------------------
 

@@ -234,7 +234,7 @@ gboolean nim_imaging_effect_from_wand (MagickWand   **wand,
   switch (effect) {
 
     case NIM_EFFECT_BLUR:
-      response = MagickAdaptiveBlurImage (result_wand, radius, sigma) == MagickTrue;
+      response = MagickBlurImage  (result_wand, radius, sigma) == MagickTrue;
       break;
 
     case NIM_EFFECT_SHARPEN:
@@ -254,7 +254,7 @@ gboolean nim_imaging_effect_from_wand (MagickWand   **wand,
       MagickResetIterator (result_wand);
 
 //      if (enable_bg)
-        MagickSetImageBackgroundColor (result_wand, bg_color);
+      MagickSetImageBackgroundColor (result_wand, bg_color);
 
       sh_width = MagickGetImageWidth (result_wand);
       sh_height = MagickGetImageHeight (result_wand);

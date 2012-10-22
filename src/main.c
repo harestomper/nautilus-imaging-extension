@@ -32,6 +32,13 @@ gcc -Wall `pkg-config --cflags --libs gobject-2.0,gtk+-3.0,glib-2.0` -o dialog-t
 
 int main (int argc, char **argv)
 {
+
+//  if (g_thread_supported ())
+//    g_thread_init (NULL);
+    
+  gdk_threads_init ();
+  gdk_threads_enter ();
+  
   gtk_init (&argc, &argv);
   NimDialog *dialog;
   gint dialog_type = 0;
@@ -41,6 +48,7 @@ int main (int argc, char **argv)
     
   dialog = nim_dialog_new (NULL, dialog_type);
   nim_dialog_run (dialog);
-  
+
+  gdk_threads_leave ();
   return 0;
 }
