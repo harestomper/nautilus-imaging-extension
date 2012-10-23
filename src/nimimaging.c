@@ -281,7 +281,7 @@ gboolean nim_imaging_effect_from_wand (MagickWand   **wand,
       negative = MagickTrue;
 
     case NIM_EFFECT_MONO:
-      response = MagickModulateImage (result_wand, 130, 110, 0);
+      response = MagickModulateImage (result_wand, 110, 0, 110);
 
       if (negative == MagickFalse)
         break;
