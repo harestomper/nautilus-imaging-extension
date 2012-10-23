@@ -225,6 +225,7 @@ gboolean nim_imaging_effect_from_wand (MagickWand   **wand,
   MagickWand *bground_wand;
   PixelWand *shadow_color;
   PixelWand *bground_color;
+  MagickWand *temp_wand;
   gint new_w, new_h, im_x, im_y, sh_x = 0, sh_y = 0;
   gint im_w, im_h, sh_w, sh_h;
   gint negative = MagickFalse;
@@ -281,7 +282,11 @@ gboolean nim_imaging_effect_from_wand (MagickWand   **wand,
       negative = MagickTrue;
 
     case NIM_EFFECT_MONO:
-      response = MagickModulateImage (result_wand, 110, 0, 110);
+      temp_wand = MagickFxImage (result_wand, "R * 0.299 + G * 0.687 + B * 0.114");
+      DestroyMagickWand (result_wand);
+      result_wand = temp_wand;
+      response = TRUE;
+//      response = MagickModulateImage (result_wand, 110, 0, 110);
 
       if (negative == MagickFalse)
         break;
