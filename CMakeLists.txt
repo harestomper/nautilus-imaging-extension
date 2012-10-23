@@ -66,7 +66,8 @@ message (STATUS ${SOURCES})
 # Set config.h
 ##
 
-set (CMAKE_C_FLAGS "-include config.h -lm")
+set (CMAKE_C_FLAGS "-include config.h")
+# -lm")
 
 #
 # Build shared library

@@ -38,12 +38,15 @@ struct _NimDialogPrivate
   GtkBuilder *builder;
   gint        dialog_type;
   MagickWand *preview_wand;
+  guint       source;
+  void (*source_func) (NimDialog *this);
 };
 //------------------------------------------------------------------------------
 
 
 //------------------------------------------------------------------------------
 static void nim_dialog_finalize (GObject *object);
+static void fake_callback_function (NimDialog *this);
 //------------------------------------------------------------------------------
 
 
@@ -532,7 +535,8 @@ static gboolean _effect_widget_value_changed (NimDialog *this)
 //------------------------------------------------------------------------------
 static void effect_widget_value_changed (GtkWidget *widget, NimDialog *this)
 {
-  g_idle_add ((GSourceFunc) _effect_widget_value_changed, this);
+//  g_idle_add ((GSourceFunc) _effect_widget_value_changed, this);
+  fake_callback_function (this);
 }
 //------------------------------------------------------------------------------
 
@@ -549,6 +553,7 @@ static void nim_dialog_effects_init (NimDialog *this)
   GObject *effect_type;
 
   priv = this->priv;
+  priv->source_func = _effect_widget_value_changed;
 
   background = gtk_builder_get_object (priv->builder, "effect_enable_bg_button");
   offx_spin = gtk_builder_get_object (priv->builder, "effect_offsetx_spin");
@@ -556,7 +561,7 @@ static void nim_dialog_effects_init (NimDialog *this)
   radius_spin = gtk_builder_get_object (priv->builder, "effect_radius_spin");
   sigma_spin = gtk_builder_get_object (priv->builder, "effect_sigma_spin");
   effect_type = gtk_builder_get_object (priv->builder, "effect_type_combo");
-
+  
   g_signal_connect (background, "toggled", G_CALLBACK (effect_widget_value_changed), this);
   g_signal_connect (offx_spin, "value-changed", G_CALLBACK (effect_widget_value_changed), this);
   g_signal_connect (offy_spin, "value-changed", G_CALLBACK (effect_widget_value_changed), this);
@@ -650,6 +655,32 @@ gint nim_dialog_run (NimDialog *this)
   }
 
   return response;
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+static gboolean fake_timeout_function (NimDialog *this)
+{
+  if (this->priv->source_func)
+    (this->priv->source_func) (this);
+
+  this->priv->source = 0;
+  return FALSE;
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+static void fake_callback_function (NimDialog *this)
+{
+  if (this->priv->source) {
+    g_source_remove (this->priv->source);
+    this->priv->source = 0;
+  }
+
+  if (this->priv->source_func)
+    this->priv->source = g_timeout_add (800, (GSourceFunc) fake_timeout_function, this);
 }
 //------------------------------------------------------------------------------
 
