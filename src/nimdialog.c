@@ -508,7 +508,7 @@ static gboolean _effect_widget_value_changed (NimDialog *this)
   sigma = gtk_spin_button_get_value (GTK_SPIN_BUTTON (sigma_spin));
   efftype = gtk_combo_box_get_active (GTK_COMBO_BOX (effect_type));
   enable_bg = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (background));
-  sigma = efftype == NIM_EFFECT_SHADOW ? ceil (radius / 2.0) : sigma;
+//  sigma = efftype == NIM_EFFECT_SHADOW ? ceil (radius / 2.0) : sigma;
 
   if (IsMagickWand (priv->preview_wand)) {
     wand = CloneMagickWand (priv->preview_wand);

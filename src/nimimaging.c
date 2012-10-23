@@ -227,27 +227,73 @@ gboolean nim_imaging_effect_from_wand (MagickWand   **wand,
   PixelWand *bground_color;
   gint new_w, new_h, im_x, im_y, sh_x = 0, sh_y = 0;
   gint im_w, im_h, sh_w, sh_h;
+  gint negative = MagickFalse;
 
   if (IsMagickWand (*wand) == MagickFalse) {
     return FALSE;
   }
 
+  result_wand = CloneMagickWand (*wand);
+
   switch (effect) {
 
     case NIM_EFFECT_BLUR:
-      result_wand = CloneMagickWand (*wand);
       response = MagickAdaptiveBlurImage (result_wand, radius, sigma) == MagickTrue;
       break;
 
     case NIM_EFFECT_SHARPEN:
-      result_wand = CloneMagickWand (*wand);
       response = MagickSharpenImage (result_wand, radius, sigma) == MagickTrue;
       break;
 
+    case NIM_EFFECT_MOTION:
+      response = MagickMotionBlurImage (result_wand, radius, sigma, 0);
+      break;
+
+    case NIM_EFFECT_OIL:
+      response = MagickOilPaintImage (result_wand, radius);
+      break;
+
+    case NIM_EFFECT_SKETCH:
+      response = MagickSketchImage (result_wand, radius, sigma, 0);
+      break;
+      
+    case NIM_EFFECT_SPREAD:
+      response = MagickSpreadImage (result_wand, radius);
+      break;
+      
+    case NIM_EFFECT_ENHANCE:
+      response = MagickEnhanceImage (result_wand);
+      break;
+      
+    case NIM_EFFECT_EQUALIZE:
+      response = MagickEqualizeImage (result_wand);
+      break;
+      
+    case NIM_EFFECT_FLIP:
+      response = MagickFlipImage (result_wand);
+      break;
+      
+    case NIM_EFFECT_FLOP:
+      response = MagickFlopImage (result_wand);
+      break;
+      
+    case NIM_EFFECT_NEGATIVE_MONO:
+      negative = MagickTrue;
+
+    case NIM_EFFECT_MONO:
+      response = MagickModulateImage (result_wand, 100, 100, 0);
+
+      if (negative == MagickFalse)
+        break;
+      
+    case NIM_EFFECT_NEGATIVE:
+      response = MagickNegateImage (result_wand, MagickFalse);
+      break;
+      
     case NIM_EFFECT_SHADOW:
     default:
 
-      shadow_wand = CloneMagickWand (*wand);
+      shadow_wand = result_wand;
       bground_wand = NewMagickWand ();
       shadow_color = NewPixelWand ();
       bground_color = NewPixelWand ();

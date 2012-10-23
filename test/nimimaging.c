@@ -389,6 +389,44 @@ MagickWand* nim_imaging_effect  (gchar     *filename,
 
 
 //------------------------------------------------------------------------------
+static MagickWand* nim_imaging_draw_text (const gchar *text,
+                                          const gchar *font_desc,
+                                          guint font_size,
+                                          const gchar *fg_color)
+{
+  MagickWand *result_wand;
+  PixelWand *foreground;
+  PixelWand *background;
+  DrawingWand *draw_wand;
+
+  result_wand = NewMagickWand ();
+  foreground = NewPixelWand ();
+  background = NewPixelWand ();
+  draw_wand = NewDrawingWand ();
+
+  PixelSetColor (background, "#00000000");
+  PixelSetColor (foreground, "#00000077");
+  MagickNewImage (result_wand, font_size * 2, 150, background);
+  DrawSetFillColor (draw_wand, foreground);
+  //DrawSetFillOpacity (draw_wand, 10);
+  DrawSetFont (draw_wand, "Ubuntu-Bold");
+  DrawSetFontSize (draw_wand, 72);
+  DrawSetTextAntialias (draw_wand, MagickTrue);
+  DrawAnnotation (draw_wand, 25, 65, "Magick");
+  MagickDrawImage (result_wand, draw_wand);
+  MagickTrimImage (result_wand, 0);
+
+  draw_wand = DestroyDrawingWand (draw_wand);
+  background = DestroyPixelWand (background);
+  foreground = DestroyPixelWand (foreground);
+
+  return result_wand;
+  
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
 
 
 
@@ -401,13 +439,14 @@ int main(int argc, char **argv)
 
   gtk_init (&argc, &argv);
 
-  if ((wand = nim_imaging_round_corners (argv [1], corners)) != NULL) 
-  {
-    nim_imaging_effect_from_wand (&wand, NIM_EFFECT_SHADOW, 20, 20, 12.0, 6.0, TRUE);
+//  if ((wand = nim_imaging_round_corners (argv [1], corners)) != NULL) 
+//  {
+//    nim_imaging_effect_from_wand (&wand, NIM_EFFECT_SHADOW, 20, 20, 12.0, 6.0, TRUE);
+    wand = nim_imaging_draw_text (NULL, NULL, 0, NULL);
     show_image (wand);
     MagickWriteImage (wand, "mask_result-sharpen.png");
     wand = DestroyMagickWand (wand);
-  }
+//  }
 
   MagickWandTerminus ();
 
