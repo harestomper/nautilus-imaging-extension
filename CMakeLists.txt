@@ -66,13 +66,15 @@ message (STATUS ${SOURCES})
 # Set config.h
 ##
 
-set (CMAKE_C_FLAGS "-include config.h")
+set (CMAKE_C_FLAGS "-include config.h" )
 # -lm")
+
+# Fix for linker, when with option "-lm" is not built in the Ubuntu
+link_libraries (m)
 
 #
 # Build shared library
 ##
-
 # add_library (${PROJECT}  SHARED ${SOURCES})
 add_executable (${PROJECT} ${SOURCES})
 
