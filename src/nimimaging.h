@@ -69,6 +69,16 @@ enum {
   NIM_FIND_UI
 };  
 
+enum {
+  NIM_RESIZE_WIDTH,
+  NIM_RESIZE_HEIGHT,
+  NIM_RESIZE_BOTH,
+  NIM_RESIZE_CROP,
+  NIM_RESIZE_CUSTOM,
+  NIM_RESIZE_LAST
+};
+
+
 MagickWand* nim_imaging_round_corners           (gchar *filename, const gdouble corners [NIM_CORNER_LAST]);
 
 gboolean    nim_imaging_round_corners_from_wand (MagickWand **wand, const gdouble corners [NIM_CORNER_LAST]);
@@ -98,6 +108,24 @@ gboolean    nim_imaging_convert_to_gif          (gchar  **filelist,
 
 gchar*      nim_imaging_get_path_to_test_image  (int tp);
 
+gboolean nim_imaging_rotate_from_wand (MagickWand **wand, gint angle, const gchar *bg_color);
+MagickWand* nim_imaging_rotate (const gchar *filename, gint angle, const gchar *bg_color);
+
+MagickWand* nim_imaging_resize (const gchar *filename,
+                                gint width,
+                                gint height,
+                                gint resize_mode,
+                                gboolean thumbnail,
+                                FilterTypes filter,
+                                gdouble factor);
+
+gboolean nim_imaging_resize_from_wand (MagickWand **wand,
+                                      gint width,
+                                      gint height,
+                                      gint resize_mode,
+                                      gboolean thumbnail,
+                                      FilterTypes filter,
+                                      gdouble factor);
 
 
 G_END_DECLS
