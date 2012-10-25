@@ -70,9 +70,9 @@ enum {
 };  
 
 enum {
+  NIM_RESIZE_BOTH,
   NIM_RESIZE_WIDTH,
   NIM_RESIZE_HEIGHT,
-  NIM_RESIZE_BOTH,
   NIM_RESIZE_CROP,
   NIM_RESIZE_CUSTOM,
   NIM_RESIZE_LAST
@@ -127,6 +127,7 @@ gboolean nim_imaging_resize_from_wand (MagickWand **wand,
                                       FilterTypes filter,
                                       gdouble factor);
 
+gboolean magick_is_animation (MagickWand *wand);
 
 G_END_DECLS
 

@@ -282,7 +282,7 @@ gboolean nim_imaging_effect_from_wand (MagickWand   **wand,
       negative = MagickTrue;
 
     case NIM_EFFECT_MONO:
-      temp_wand = MagickFxImage (result_wand, "R * 0.299 + G * 0.687 + B * 0.114");
+      temp_wand = MagickFxImage (result_wand,  "R * 299 / 1000 + G * 687 / 1000 + B * 114 / 1000");
       DestroyMagickWand (result_wand);
       result_wand = temp_wand;
       response = TRUE;
@@ -432,17 +432,25 @@ gboolean nim_imaging_rotate_from_wand (MagickWand **wand, gint angle, const gcha
   PixelWand *background;
   gboolean response = FALSE;
 
-  result = CloneMagickWand (*wand);
+  if (magick_is_animation (*wand)) {
+    result = MagickCoalesceImages (*wand);
+  } else {
+    result = CloneMagickWand (*wand);
+  }
+
   background = NewPixelWand ();
   PixelSetColor (background, bg_color != NULL ? bg_color : "none");
-  response = MagickRotateImage (result, background, angle) == MagickTrue;
+  MagickResetIterator (result);
+
+  while (MagickNextImage (result) != MagickFalse)
+    response = MagickRotateImage (result, background, angle) == MagickTrue;
 
   if (response)
   {
-    result = DestroyMagickWand (result);
-  } else {
     *wand = DestroyMagickWand (*wand);
     *wand = result;
+  } else {
+    result = DestroyMagickWand (result);
   }
 
   background = DestroyPixelWand (background);
@@ -460,11 +468,11 @@ MagickWand* nim_imaging_rotate (const gchar *filename, gint angle, const gchar *
 
   result = NewMagickWand ();
 
-  if (MagickReadImage (result, filename) == MagickTrue)
-    response = nim_imaging_rotate_from_wand (&result, angle, bg_color);
-
-  if (!response)
-    return result;
+  if (MagickReadImage (result, filename) == MagickTrue) {
+    if (nim_imaging_rotate_from_wand (&result, angle, bg_color)) {
+      return result;
+    }
+  }
 
   result = DestroyMagickWand (result);
   return NULL;
@@ -483,10 +491,13 @@ gboolean nim_imaging_resize_from_wand (MagickWand **wand,
 {
   gboolean response = FALSE;
   MagickWand *image;
-  gdouble src_w, src_h, aspect;
+  gdouble src_w, src_h, aspect, k;
   gdouble crop_x = 0, crop_y = 0;
   gdouble crop_w, crop_h;
   gdouble dest_w, dest_h;
+  const gchar *format;
+  gchar *tmp_fmt;
+  gboolean isanimation = FALSE;
 
   if (IsMagickWand (*wand) == MagickFalse)
     return FALSE;
@@ -494,7 +505,14 @@ gboolean nim_imaging_resize_from_wand (MagickWand **wand,
   if (resize_mode < 0 || resize_mode >= NIM_RESIZE_LAST)
     return FALSE;
 
-  image = CloneMagickWand (*wand);
+
+  if (isanimation) {
+    image = MagickCoalesceImages (*wand);
+    MagickResetIterator (image);
+  } else {
+    image = CloneMagickWand (*wand);
+  }
+
   src_w = (gdouble) MagickGetImageWidth (image);
   src_h = (gdouble) MagickGetImageHeight (image);
   aspect = src_w / src_h;
@@ -502,56 +520,57 @@ gboolean nim_imaging_resize_from_wand (MagickWand **wand,
   crop_h = dest_h = (gdouble) height;
 
   if (resize_mode == NIM_RESIZE_HEIGHT) {
-      dest_w = dest_h * aspect;
+    dest_w = dest_h * aspect;
   } else if (resize_mode == NIM_RESIZE_WIDTH) {
-      dest_h = dest_w / aspect;
+    dest_h = dest_w / aspect;
   } else if (resize_mode == NIM_RESIZE_BOTH) {
-    gdouble rest = 0;
-
-    if (dest_w > dest_h)
-      dest_w = dest_h * aspect;
-    else
-      dest_h = dest_w / aspect;
-
-    rest = MAX (dest_h < crop_h ? crop_h - dest_h : 0,
-                dest_w < crop_w ? crop_w - crop_w : 0);
-
-    dest_w -= rest;
-    dest_h -= rest;
-    rest = MAX (dest_w < 0 ? ABS (dest_w) : 0, dest_h < 0 ? ABS (dest_h) : 0);
-    dest_w += rest;
-    dest_h += rest;
+    k = MIN (dest_w / src_w, dest_h / src_h);
+    dest_w = round (src_w * k);
+    dest_h = round (src_h * k);
       
   } else if (resize_mode == NIM_RESIZE_CROP) {
-    gdouble rest = 0;
+    k = MAX (dest_w / src_w, dest_h / src_h);
+    dest_w = src_w * k;
+    dest_h = src_h * k;
 
-    if (src_w > src_h)
-      dest_w = dest_h * aspect;
-    else 
-      dest_h = dest_w / aspect;
+    if (dest_w < crop_w) {
+      dest_w = crop_w;
+      dest_h = crop_w / aspect;
+    }
+    if (dest_h < crop_h) {
+      dest_h = crop_h;
+      dest_w = crop_h * aspect;
+    }
 
-    rest = MAX (dest_h < crop_h ? crop_h - dest_h : 0,
-                dest_w < crop_w ? crop_w - crop_w : 0);
-    dest_w += rest;
-    dest_h += rest;
-    crop_x = (crop_w - dest_w) / 2.0;
-    crop_y = (crop_h - dest_h) / 2.0;
+    crop_x = ABS (crop_w - dest_w) / 2.0;
+    crop_y = ABS (crop_h - dest_h) / 2.0;
   }
 
-  dest_w = ceil (dest_w);
-  dest_h = ceil (dest_h);
-  crop_w = ceil (crop_w);
-  crop_h = ceil (crop_h);
-  crop_x = floor (crop_x);
-  crop_y = floor (crop_y);
+  dest_w = floor (dest_w);
+  dest_h = floor (dest_h);
+  crop_w = floor (crop_w);
+  crop_h = floor (crop_h);
+  crop_x = ceil (crop_x);
+  crop_y = ceil (crop_y);
 
-  if (thumbnail)
-    response = MagickThumbnailImage (image, dest_w, dest_h) == MagickTrue;
-  else
+  MagickResetIterator (image);
+
+  if (thumbnail || isanimation) {
+    while (MagickNextImage (image) != MagickFalse)
+      response = MagickThumbnailImage (image, dest_w, dest_h) == MagickTrue;
+
+  } else if (dest_w == src_w && dest_h == src_h) {
+    response = TRUE;
+  } else {
     response = MagickResizeImage (image, dest_w, dest_h, filter, factor) == MagickTrue;
+  }
 
-  if (response && resize_mode == NIM_RESIZE_CROP)
-    response = MagickCropImage (image, crop_w, crop_h, crop_x, crop_y) == MagickTrue;
+  if (response && resize_mode == NIM_RESIZE_CROP && (crop_w != src_w || crop_h != src_h)) {
+    MagickResetIterator (image);
+
+    while (MagickNextImage (image) != MagickFalse)
+      response = MagickCropImage (image, crop_w, crop_h, crop_x, crop_y) == MagickTrue;
+  }
 
   if (response) {
     *wand = DestroyMagickWand (*wand);
@@ -589,6 +608,26 @@ MagickWand* nim_imaging_resize (const gchar *filename,
 
   return wand;
     
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+gboolean magick_is_animation (MagickWand *wand)
+{
+  const gchar *format;
+  gchar *tmpfmt;
+  gboolean response;
+
+  format = MagickGetImageFormat (wand);
+  tmpfmt = g_ascii_strdown (format, -1);
+  
+  response = (g_strcmp0 (tmpfmt, "gif") == 0
+           || g_strcmp0 (tmpfmt, "mng") == 0
+           || g_strcmp0 (tmpfmt, "miff") == 0);
+  g_free (tmpfmt);
+
+  return response;
 }
 //------------------------------------------------------------------------------
 
