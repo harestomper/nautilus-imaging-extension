@@ -59,6 +59,8 @@ GType nim_dialog_get_type (void);
 NimDialog *nim_dialog_new (GtkWindow *parent_window, gint dialog_type);
 gint nim_dialog_run (NimDialog *this);
 
+gint nim_dialog_config_get_data (NimDialog *this);
+
 
 G_END_DECLS
 

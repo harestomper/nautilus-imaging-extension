@@ -66,7 +66,8 @@ enum {
 
 enum {
   NIM_FIND_IMAGE,
-  NIM_FIND_UI
+  NIM_FIND_UI,
+  NIM_FIND_CONFIG
 };  
 
 enum {
@@ -106,7 +107,7 @@ gboolean    nim_imaging_convert_to_gif          (gchar  **filelist,
                                                  gint        delay,
                                                  gboolean combine);
 
-gchar*      nim_imaging_get_path_to_test_image  (int tp);
+gchar*      nim_imaging_find_file  (int tp);
 
 gboolean nim_imaging_rotate_from_wand (MagickWand **wand, gint angle, const gchar *bg_color);
 MagickWand* nim_imaging_rotate (const gchar *filename, gint angle, const gchar *bg_color);

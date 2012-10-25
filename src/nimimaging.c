@@ -389,7 +389,7 @@ MagickWand* nim_imaging_effect  (gchar     *filename,
 
 
 //------------------------------------------------------------------------------
-gchar* nim_imaging_get_path_to_test_image (int tp)
+gchar* nim_imaging_find_file (int tp)
 {
   gchar *result = NULL;
   const gchar *dirname;
@@ -397,12 +397,28 @@ gchar* nim_imaging_get_path_to_test_image (int tp)
   const gchar *target;
   gint n;
 
-  if (tp == 0)
-    target = "test-image.png";
-  else
-    target = "common.ui";
-    
-  datadirs = g_get_system_data_dirs ();
+  switch (tp) {
+    case NIM_FIND_IMAGE:
+      target = "test-image.png";
+      datadirs = g_get_system_data_dirs ();
+      break;
+
+    case NIM_FIND_UI:
+      target = "common.ui";
+      datadirs = g_get_system_data_dirs ();
+      break;
+
+    case NIM_FIND_CONFIG:
+      target = "settings.conf";
+      datadirs = g_new0 (gchar*, 2);
+      datadirs [0] = g_strdup (g_get_user_config_dir ());
+      datadirs [1] = NULL;
+      break;
+
+    default:
+      return NULL;
+  }
+  
   for (n = 0; ; n++)
   {
     dirname = datadirs [n];
@@ -420,6 +436,8 @@ gchar* nim_imaging_get_path_to_test_image (int tp)
     }
   }
 
+  g_strfreev (datadirs);
+  
   return result;
 }
 //------------------------------------------------------------------------------
