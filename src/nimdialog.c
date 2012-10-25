@@ -569,7 +569,7 @@ static void nim_dialog_effects_init (NimDialog *this)
   g_signal_connect (sigma_spin, "value-changed", G_CALLBACK (effect_widget_value_changed), this);
   g_signal_connect (effect_type, "changed", G_CALLBACK (effect_widget_value_changed), this);
 
-  effect_widget_value_changed (NULL, this);
+  _effect_widget_value_changed (this);
 }
 //------------------------------------------------------------------------------
 
@@ -582,7 +582,7 @@ NimDialog* nim_dialog_new (GtkWindow* parent_window, gint dialog_type)
   GObject *object;
   GtkWidget *widget;
   GtkWidget *dialog;
-  GtkWidget *mainboxe;
+  GtkWidget *mainbox;
   GError *error = NULL;
   gchar *uifile;
 
@@ -613,7 +613,7 @@ NimDialog* nim_dialog_new (GtkWindow* parent_window, gint dialog_type)
   
   g_free (widget_name);
 
-  if (widget && main_boxe) {
+  if (widget && mainbox) {
     gtk_box_pack_start (GTK_BOX (mainbox), widget, FALSE, FALSE, 0);
     gtk_widget_show_all (mainbox);
   }
