@@ -582,6 +582,7 @@ NimDialog* nim_dialog_new (GtkWindow* parent_window, gint dialog_type)
   GObject *object;
   GtkWidget *widget;
   GtkWidget *dialog;
+  GtkWidget *mainboxe;
   GError *error = NULL;
   gchar *uifile;
 
@@ -608,11 +609,13 @@ NimDialog* nim_dialog_new (GtkWindow* parent_window, gint dialog_type)
   widget_name = g_strdup_printf ("property%i", dialog_type);
   widget = (GtkWidget *) gtk_builder_get_object (priv->builder, widget_name);
   dialog = (GtkWidget *) gtk_builder_get_object (priv->builder, "dialog1");
+  mainbox = (GtkWidget *) gtk_builder_get_object (priv->builder, "main_box");
+  
   g_free (widget_name);
 
-  if (widget) {
-    gtk_widget_set_no_show_all (widget, FALSE);
-    gtk_widget_show_all (widget);
+  if (widget && main_boxe) {
+    gtk_box_pack_start (GTK_BOX (mainbox), widget, FALSE, FALSE, 0);
+    gtk_widget_show_all (mainbox);
   }
 
   if (dialog && GTK_IS_WINDOW (parent_window)) {
