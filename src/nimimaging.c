@@ -393,24 +393,28 @@ gchar* nim_imaging_find_file (int tp)
 {
   gchar *result = NULL;
   const gchar *dirname;
-  const gchar *const *datadirs;
-  const gchar *target;
-  gint n;
+  const gchar *const *temp_data_dirs = NULL;
+  gchar **datadirs;
+  const gchar *target = NULL;
+  gint n, n_elem = 0;
 
   switch (tp) {
     case NIM_FIND_IMAGE:
       target = "test-image.png";
-      datadirs = g_get_system_data_dirs ();
-      break;
 
     case NIM_FIND_UI:
-      target = "common.ui";
-      datadirs = g_get_system_data_dirs ();
+      if (target == NULL)
+        target = "common.ui";
+
+      temp_data_dirs = g_get_system_data_dirs ();
+      n_elem = g_strv_length ((gchar**) temp_data_dirs);
+      datadirs = g_strdupv ((gchar **) temp_data_dirs);
       break;
 
     case NIM_FIND_CONFIG:
       target = "settings.conf";
-      datadirs = g_new0 (gchar*, 2);
+      n_elem = 2;
+      datadirs = g_new0 (gchar*, n_elem);
       datadirs [0] = g_strdup (g_get_user_config_dir ());
       datadirs [1] = NULL;
       break;
@@ -419,13 +423,9 @@ gchar* nim_imaging_find_file (int tp)
       return NULL;
   }
   
-  for (n = 0; ; n++)
+  for (n = 0; n < n_elem; n++)
   {
     dirname = datadirs [n];
-
-    if (dirname == NULL)
-      break;
-      
     result = g_build_filename (G_DIR_SEPARATOR_S, dirname, "nautilus-imaging", target, NULL);
 
     if (g_file_test (result, G_FILE_TEST_EXISTS)) {
