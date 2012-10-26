@@ -31,13 +31,10 @@
 #define NIM_CHILD_WIDGET  "nim-dialog-child-widget"
 #define OBJECT_NAME   "nim-dialog-object-name"
 #define OBJECT_GROUP  "nim-dialog-object-group"
-#define COMMON_GROUP  "Common"
-#define RESIZE_GROUP  "Resize"
-#define ROTATE_GROUP  "Rotate"
-#define CONVERT_GROUP "Convert"
-#define ROUND_GROUP   "RoundingCorners"
-#define EFFECTS_GROUP "AddEffect"
-#define MARKER_GROUP  "DrawWatermark"
+
+#define DEFAULT_PREVIEW_WIDTH   200
+#define DEFAULT_PREVIEW_HEIGHT  150
+#define TIMEOUT_TO_CHANGE       500
 
 #define DEFAULT_ROTATE_MODE           NIM_ROTATE_90
 #define DEFAULT_ROTATE_ANGLE          90.0
@@ -79,7 +76,7 @@
 #define DEFAULT_MARKER_X              10.0
 #define DEFAULT_MARKER_Y              10.0
 
-#define DEFAULT_COMMON_TYPE           NIM_SAVE_OTHER
+#define DEFAULT_COMMON_TYPE           NIM_SAVE_MARK
 #define DEFAULT_COMMON_SUFFIX         "modified"
 #define DEFAULT_COMMON_FOLDER         (g_get_user_special_dir (G_USER_DIRECTORY_PICTURES))
 //------------------------------------------------------------------------------
@@ -93,7 +90,8 @@ struct _NimDialogPrivate
   GKeyFile   *config;
   MagickWand *preview_wand;
   guint       source;
-  gboolean (*source_func) (NimDialog *this);
+  void (*source_func) (NimDialog *this);
+  gpointer    user_data;
 };
 //------------------------------------------------------------------------------
 
@@ -234,41 +232,43 @@ static void nim_dialog_resize_thumb_toggled (GtkToggleButton *button, NimDialog 
 
 
 //------------------------------------------------------------------------------
+static void nim_dialog_resize_filter_combo_changed (GtkComboBox *combo, NimDialog *this)
+{
+  NimDialogPrivate *priv;
+  gint active;
+  GObject *factor_box;
+
+  priv = this->priv;
+  factor_box = gtk_builder_get_object (priv->builder, "resize_factor_box");
+  active = gtk_combo_box_get_active (combo);
+
+  gtk_widget_set_sensitive (GTK_WIDGET (factor_box), active != NIM_RESIZE_FILTER_NONE);
+  nim_dialog_write_value (this, G_OBJECT (combo));
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
 static void nim_dialog_conv_type_combo_changed (GtkComboBox *combo, NimDialog *this)
 {
   NimDialogPrivate *priv;
   gint active;
-  gchar *boxname;
-  GtkWidget *widget;
-
+  GObject *quality_box;
+  GObject *animation_box;
+  
   priv = this->priv;
   active = gtk_combo_box_get_active (combo);
   active = active < 0 ? 0 : active;
-  boxname = g_strdup_printf ("conv_pref%i", active);
-  widget = (GtkWidget *) gtk_builder_get_object (priv->builder, boxname);
-  g_free (boxname);
 
-  if (GTK_IS_WIDGET (widget)) {
-    gint value = 0;
-    GtkWidget *temp_widget = NULL;
+  quality_box = gtk_builder_get_object (priv->builder, "conv_quality_box");
+  animation_box = gtk_builder_get_object (priv->builder, "conv_animation_box");
 
-    while (TRUE) {
-      boxname = g_strdup_printf ("conv_pref%i", value);
-      temp_widget = (GtkWidget *) gtk_builder_get_object (priv->builder, boxname);
-      g_free (boxname);
-
-      if (GTK_IS_WIDGET (temp_widget)) {
-        gtk_widget_set_no_show_all (temp_widget, TRUE);
-        gtk_widget_set_visible (temp_widget, FALSE);
-        value++;
-      } else {
-        break;
-      }
-    }
-
-    gtk_widget_set_no_show_all (widget, FALSE);
-    gtk_widget_set_visible (widget, TRUE);
-  }
+  nim_dialog_widget_set_visible (GTK_WIDGET (quality_box),
+                                  (active == NIM_CONVERT_TYPE_JPEG
+                                  || active == NIM_CONVERT_TYPE_PNG
+                                  || active == NIM_CONVERT_TYPE_TIFF));
+  nim_dialog_widget_set_visible (GTK_WIDGET (animation_box),
+                                  (active == NIM_CONVERT_TYPE_GIF));
 }
 //------------------------------------------------------------------------------
 
@@ -294,7 +294,7 @@ static gdouble round_spin_get_value (NimDialog *this, const gchar *wname, gboole
 
 
 //------------------------------------------------------------------------------
-static void  nim_dialog_round_spin_changed (GtkSpinButton *spin, NimDialog *this)
+static void  nim_dialog_round_spin_changed (NimDialog *this)
 {
   NimDialogPrivate *priv;
   gdouble corners [NIM_CORNER_LAST] = {0};
@@ -305,8 +305,17 @@ static void  nim_dialog_round_spin_changed (GtkSpinButton *spin, NimDialog *this
   gchar *filename;
   gdouble stick_value;
   gboolean active;
+  GtkSpinButton *spin;
 
   priv = this->priv;
+
+  if (GTK_IS_SPIN_BUTTON (priv->user_data)) {
+    spin = GTK_SPIN_BUTTON (priv->user_data);
+    priv->user_data = NULL;
+  } else {
+    return;
+  }
+    
   filename = nim_imaging_find_file (NIM_FIND_IMAGE);
   preview = GTK_WIDGET (gtk_builder_get_object (priv->builder, "round_preview_image"));
 
@@ -323,6 +332,13 @@ static void  nim_dialog_round_spin_changed (GtkSpinButton *spin, NimDialog *this
 
   if ((wand = nim_imaging_round_corners (filename, corners)) != NULL)
   {
+    nim_imaging_resize_from_wand (&wand,
+                                   DEFAULT_PREVIEW_WIDTH,
+                                   DEFAULT_PREVIEW_HEIGHT,
+                                   NIM_RESIZE_BOTH,
+                                   TRUE,
+                                   Lanczos2Filter,
+                                   1.0);
     if ((pixbuf = nim_imaging_convert_wand_to_pixbuf (wand)) != NULL)
     {
       gtk_image_set_from_pixbuf (GTK_IMAGE (preview), pixbuf);
@@ -339,15 +355,16 @@ static void  nim_dialog_round_spin_changed (GtkSpinButton *spin, NimDialog *this
 
 
 //------------------------------------------------------------------------------
-static void nim_dialog_effect_widget_changed (GtkWidget *widget, NimDialog *this)
+static void nim_dialog_widget_changed_timeout (GtkWidget *widget, NimDialog *this)
 {
+  this->priv->user_data = (gpointer) widget;
   fake_callback_function (this);
 }
 //------------------------------------------------------------------------------
 
 
 //------------------------------------------------------------------------------
-static gboolean nim_dialog_effect_widget_changed_worker (NimDialog *this)
+static void nim_dialog_effect_widget_changed_worker (NimDialog *this)
 {
   gchar *filename;
   NimDialogPrivate *priv;
@@ -365,13 +382,14 @@ static gboolean nim_dialog_effect_widget_changed_worker (NimDialog *this)
   gdouble offx, offy, radius, sigma, efftype;
 
   priv = this->priv;
+  priv->user_data = NULL;
 
   if (!IsMagickWand (priv->preview_wand)) {
     gboolean result;
     filename = nim_imaging_find_file (NIM_FIND_IMAGE);
     
     if (filename == NULL)
-      return FALSE;
+      return;
 
     priv->preview_wand = NewMagickWand ();
     result = MagickReadImage (priv->preview_wand, filename) == MagickTrue;
@@ -379,7 +397,7 @@ static gboolean nim_dialog_effect_widget_changed_worker (NimDialog *this)
 
     if (!result) {
       priv->preview_wand = DestroyMagickWand (priv->preview_wand);
-      return FALSE;
+      return;
     }
   }
     
@@ -401,8 +419,15 @@ static gboolean nim_dialog_effect_widget_changed_worker (NimDialog *this)
   if (IsMagickWand (priv->preview_wand)) {
     wand = CloneMagickWand (priv->preview_wand);
     nim_imaging_effect_from_wand (&wand, efftype, offx, offy, radius, sigma, enable_bg);
+    nim_imaging_resize_from_wand (&wand,
+                                   DEFAULT_PREVIEW_WIDTH,
+                                   DEFAULT_PREVIEW_HEIGHT,
+                                   NIM_RESIZE_BOTH,
+                                   TRUE,
+                                   Lanczos2Filter,
+                                   1.0);
   } else {
-    return FALSE;
+    return;
   }
 
   pixbuf = nim_imaging_convert_wand_to_pixbuf (wand);
@@ -415,7 +440,7 @@ static gboolean nim_dialog_effect_widget_changed_worker (NimDialog *this)
   if (IsMagickWand (wand))
     wand = DestroyMagickWand (wand);
 
-  return FALSE;
+  return;
 }
 //------------------------------------------------------------------------------
 
@@ -500,12 +525,15 @@ static void nim_dialog_choose_folder_activated (GtkWidget *widget, NimDialog *th
 {
   NimDialogPrivate *priv;
   GtkWidget *fcdialog;
-  GtkWidget *dialog;
-  GtkWidget *entry;
+  GObject *dialog;
+  GObject *entry;
   gint response;
+  const gchar *filename;
   
   priv = this->priv;
-  dialog = (GtkWidget *) gtk_builder_get_object (priv->builder, "dialog1");
+  dialog = gtk_builder_get_object (priv->builder, "dialog1");
+  entry = gtk_builder_get_object (priv->builder, "save_choose_entry");
+  filename = gtk_entry_get_text (GTK_ENTRY (entry));
   fcdialog = gtk_file_chooser_dialog_new (NULL,
                                           GTK_WINDOW (dialog),
                                           GTK_FILE_CHOOSER_ACTION_OPEN
@@ -515,12 +543,12 @@ static void nim_dialog_choose_folder_activated (GtkWidget *widget, NimDialog *th
                                           GTK_STOCK_OK,
                                           GTK_RESPONSE_OK,
                                           NULL);
+  gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (fcdialog), filename);
   response = gtk_dialog_run (GTK_DIALOG (fcdialog));
   gtk_widget_hide (fcdialog);
 
   if (response == GTK_RESPONSE_OK) {
     gchar *foldername;
-    entry = (GtkWidget *) gtk_builder_get_object (priv->builder, "save_choose_entry");
     foldername = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (fcdialog));
     gtk_entry_set_text (GTK_ENTRY (entry), foldername);
     g_free (foldername);
@@ -669,6 +697,8 @@ static GObject* nim_dialog_set_default (NimDialog *this,
       signal_name = "color-set";
     } else if (GTK_IS_FONT_BUTTON (object)) {
       signal_name = "font-set";
+    } else if (GTK_IS_BUTTON (object)) {
+      signal_name = "clicked";
     }
 
     if (signal_name)
@@ -809,7 +839,48 @@ static void nim_dialog_config_init (NimDialog *this)
   priv->config = g_key_file_new ();
 
   if (filename) {
-    g_key_file_load_from_file (priv->config, filename, G_KEY_FILE_NONE, NULL);
+    if (!g_key_file_load_from_file (priv->config, filename, G_KEY_FILE_NONE, NULL)) {
+      g_key_file_set_integer (priv->config, ROTATE_GROUP, "rotate_angle_combo", DEFAULT_ROTATE_MODE);
+      g_key_file_set_string (priv->config, ROTATE_GROUP, "rotate_color_button", DEFAULT_ROTATE_COLOR);
+      g_key_file_set_double (priv->config, ROTATE_GROUP, "rotate_angle_spin", DEFAULT_ROTATE_ANGLE);
+      g_key_file_set_string (priv->config, COMMON_GROUP, "save_choose_entry", DEFAULT_COMMON_FOLDER);
+      g_key_file_set_string (priv->config, COMMON_GROUP, "save_suffix_entry", DEFAULT_COMMON_SUFFIX);
+      g_key_file_set_boolean (priv->config, COMMON_GROUP, "save_overwrite_radio", DEFAULT_COMMON_TYPE == NIM_SAVE_OVER);
+      g_key_file_set_boolean (priv->config, COMMON_GROUP, "save_suffix_radio", DEFAULT_COMMON_TYPE == NIM_SAVE_MARK);
+      g_key_file_set_boolean (priv->config, COMMON_GROUP, "save_choose_radio", DEFAULT_COMMON_TYPE == NIM_SAVE_OTHER);
+      g_key_file_set_double (priv->config, MARKER_GROUP, "water_alignx_spin", DEFAULT_MARKER_X);
+      g_key_file_set_double (priv->config, MARKER_GROUP, "water_aligny_spin", DEFAULT_MARKER_Y);
+      g_key_file_set_double (priv->config, MARKER_GROUP, "water_pitch_spin", DEFAULT_MARKER_PITCH);
+      g_key_file_set_integer (priv->config, MARKER_GROUP, "water_method_combo", DEFAULT_MARKER_METHOD);
+      g_key_file_set_double (priv->config, MARKER_GROUP, "water_opacity_spin", DEFAULT_MARKER_OPACITY);
+      g_key_file_set_string (priv->config, MARKER_GROUP, "water_font_color", DEFAULT_MARKER_FG);
+      g_key_file_set_string (priv->config, MARKER_GROUP, "water_font_button", DEFAULT_MARKER_FONT);
+      g_key_file_set_string (priv->config, MARKER_GROUP, "water_text_entry", DEFAULT_MARKER_TEXT);
+      g_key_file_set_boolean (priv->config, MARKER_GROUP, "water_text_radio", DEFAULT_MARKER_TEXT_TYPE == TRUE);
+      g_key_file_set_boolean (priv->config, MARKER_GROUP, "water_file_radio", DEFAULT_MARKER_TEXT_TYPE == FALSE);
+      g_key_file_set_boolean (priv->config, EFFECTS_GROUP, "effect_enable_bg_button", DEFAULT_EFFECT_BG);
+      g_key_file_set_double (priv->config, EFFECTS_GROUP, "effect_angle_spin", DEFAULT_EFFECT_ANGLE);
+      g_key_file_set_double (priv->config, EFFECTS_GROUP, "effect_sigma_spin", DEFAULT_EFFECT_SIGMA);
+      g_key_file_set_double (priv->config, EFFECTS_GROUP, "effect_radius_spin", DEFAULT_EFFECT_RADIUS);
+      g_key_file_set_double (priv->config, EFFECTS_GROUP, "effect_offsety_spin", DEFAULT_EFFECT_OFFY);
+      g_key_file_set_double (priv->config, EFFECTS_GROUP, "effect_offsetx_spin", DEFAULT_EFFECT_OFFX);
+      g_key_file_set_integer (priv->config, EFFECTS_GROUP, "effect_type_combo", DEFAULT_EFFECT_TYPE);
+      g_key_file_set_integer (priv->config, ROUND_GROUP, "round_tl_spin", DEFAULT_ROUND_TL);
+      g_key_file_set_integer (priv->config, ROUND_GROUP, "round_bl_spin", DEFAULT_ROUND_BL);
+      g_key_file_set_integer (priv->config, ROUND_GROUP, "round_tr_spin", DEFAULT_ROUND_TR);
+      g_key_file_set_integer (priv->config, ROUND_GROUP, "round_br_spin", DEFAULT_ROUND_BR);
+      g_key_file_set_boolean (priv->config, ROUND_GROUP, "round_stick_button", DEFAULT_ROUND_STICK);
+      g_key_file_set_integer (priv->config, CONVERT_GROUP, "conv_type_combo", DEFAULT_CONVERT_TYPE);
+      g_key_file_set_double (priv->config, CONVERT_GROUP, "conv_quality_spin", DEFAULT_CONVERT_QUALITY);
+      g_key_file_set_integer (priv->config, CONVERT_GROUP, "conv_speed_spin", DEFAULT_CONVERT_ASPEED);
+      g_key_file_set_boolean (priv->config, CONVERT_GROUP, "conv_combine_files", DEFAULT_CONVERT_COMBINE);
+      g_key_file_set_integer (priv->config, RESIZE_GROUP, "resize_mode_combo",  DEFAULT_RESIZE_MODE);
+      g_key_file_set_integer (priv->config, RESIZE_GROUP, "resize_width_spin", DEFAULT_RESIZE_WIDTH);
+      g_key_file_set_integer (priv->config, RESIZE_GROUP, "resize_height_spin", DEFAULT_RESIZE_HEIGHT);
+      g_key_file_set_boolean (priv->config, RESIZE_GROUP, "resize_thumb_button", DEFAULT_RESIZE_THUMB);
+      g_key_file_set_integer (priv->config, RESIZE_GROUP, "resize_filter_combo", DEFAULT_RESIZE_FILTER);
+      g_key_file_set_double (priv->config, RESIZE_GROUP, "resize_factor_spin", DEFAULT_RESIZE_FACTOR);
+    }
     g_free (filename);
   }
 }
@@ -842,6 +913,8 @@ static void nim_dialog_common_init (NimDialog *this)
                             G_CALLBACK (nim_dialog_choose_folder_activated));
   nim_dialog_set_default (this, COMMON_GROUP, "save_suffix_entry",
                             G_CALLBACK (nim_dialog_simple_callback));
+  nim_dialog_set_default (this, COMMON_GROUP, "save_choose_entry",
+                            G_CALLBACK (nim_dialog_simple_callback));
 }
 //------------------------------------------------------------------------------
 
@@ -873,7 +946,7 @@ static void nim_dialog_resize_init (NimDialog *this)
   nim_dialog_set_default (this, RESIZE_GROUP, "resize_thumb_button",
                             G_CALLBACK (nim_dialog_resize_thumb_toggled));
   nim_dialog_set_default (this, RESIZE_GROUP, "resize_filter_combo",
-                            G_CALLBACK (nim_dialog_simple_callback));
+                            G_CALLBACK (nim_dialog_resize_filter_combo_changed));
   nim_dialog_set_default (this, RESIZE_GROUP, "resize_factor_spin",
                             G_CALLBACK (nim_dialog_simple_callback));
 }
@@ -899,17 +972,20 @@ static void nim_dialog_convert_init (NimDialog *this)
 static void  nim_dialog_rounder_init (NimDialog *this)
 {
   GObject *object;
+
+  this->priv->source_func = nim_dialog_round_spin_changed;
   nim_dialog_set_default (this, ROUND_GROUP, "round_tl_spin",
-                              G_CALLBACK (nim_dialog_round_spin_changed));
+                              G_CALLBACK (nim_dialog_widget_changed_timeout));
   nim_dialog_set_default (this, ROUND_GROUP, "round_tr_spin",
-                              G_CALLBACK (nim_dialog_round_spin_changed));
+                              G_CALLBACK (nim_dialog_widget_changed_timeout));
   nim_dialog_set_default (this, ROUND_GROUP, "round_bl_spin",
-                              G_CALLBACK (nim_dialog_round_spin_changed));
+                              G_CALLBACK (nim_dialog_widget_changed_timeout));
   object = nim_dialog_set_default (this, ROUND_GROUP, "round_br_spin",
-                              G_CALLBACK (nim_dialog_round_spin_changed));
+                              G_CALLBACK (nim_dialog_widget_changed_timeout));
   nim_dialog_set_default (this, ROUND_GROUP, "round_stick_button",
                               G_CALLBACK (nim_dialog_simple_callback));
-  nim_dialog_round_spin_changed (GTK_SPIN_BUTTON (object), this);
+  this->priv->user_data = (gpointer) object;
+  nim_dialog_round_spin_changed (this);
 }
 //------------------------------------------------------------------------------
 
@@ -922,17 +998,17 @@ static void nim_dialog_effects_init (NimDialog *this)
   nim_dialog_set_default (this, EFFECTS_GROUP, "effect_type_combo",
                               G_CALLBACK (nim_dialog_effect_type_combo_changed));
   nim_dialog_set_default (this, EFFECTS_GROUP, "effect_offsetx_spin",
-                              G_CALLBACK (nim_dialog_effect_widget_changed));
+                              G_CALLBACK (nim_dialog_widget_changed_timeout));
   nim_dialog_set_default (this, EFFECTS_GROUP, "effect_offsety_spin",
-                              G_CALLBACK (nim_dialog_effect_widget_changed));
+                              G_CALLBACK (nim_dialog_widget_changed_timeout));
   nim_dialog_set_default (this, EFFECTS_GROUP, "effect_radius_spin",
-                              G_CALLBACK (nim_dialog_effect_widget_changed));
+                              G_CALLBACK (nim_dialog_widget_changed_timeout));
   nim_dialog_set_default (this, EFFECTS_GROUP, "effect_sigma_spin",
-                              G_CALLBACK (nim_dialog_effect_widget_changed));
+                              G_CALLBACK (nim_dialog_widget_changed_timeout));
   nim_dialog_set_default (this, EFFECTS_GROUP, "effect_angle_spin",
-                              G_CALLBACK (nim_dialog_effect_widget_changed));
+                              G_CALLBACK (nim_dialog_widget_changed_timeout));
   nim_dialog_set_default (this, EFFECTS_GROUP, "effect_enable_bg_button",
-                              G_CALLBACK (nim_dialog_effect_widget_changed));
+                              G_CALLBACK (nim_dialog_widget_changed_timeout));
   nim_dialog_effect_widget_changed_worker (this);
 }
 //------------------------------------------------------------------------------
@@ -998,6 +1074,9 @@ NimDialog* nim_dialog_new (GtkWindow* parent_window, gint dialog_type)
   this = NIM_DIALOG (object);
   priv = this->priv;
   priv->preview_wand = NULL;
+  priv->source = 0L;
+  priv->source_func = NULL;
+  priv->user_data = NULL;
 
   priv->dialog_type = dialog_type;
   priv->builder = gtk_builder_new ();
@@ -1098,7 +1177,19 @@ static void fake_callback_function (NimDialog *this)
   }
 
   if (this->priv->source_func)
-    this->priv->source = g_timeout_add (800, (GSourceFunc) fake_timeout_function, this);
+    this->priv->source = g_timeout_add (TIMEOUT_TO_CHANGE, (GSourceFunc) fake_timeout_function, this);
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+gchar *nim_dialog_get_data (NimDialog *this, gsize *length)
+{
+  gchar *result;
+  
+  result = g_key_file_to_data (this->priv->config, length, NULL);
+
+  return result;
 }
 //------------------------------------------------------------------------------
 

@@ -43,12 +43,15 @@ int main (int argc, char **argv)
   gtk_init (&argc, &argv);
   NimDialog *dialog;
   gint dialog_type = 0;
+  gchar *data;
 
   if (argc > 1) 
     dialog_type = (gint) g_ascii_strtoll (argv [1], NULL, 10);
     
   dialog = nim_dialog_new (NULL, dialog_type);
   nim_dialog_run (dialog);
+  data = nim_dialog_get_data (dialog, NULL);
+  g_print ("%s\n", data);
 
   gdk_threads_leave ();
   MagickWandTerminus ();

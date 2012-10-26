@@ -53,11 +53,20 @@ struct _NimDialogClass
   GObjectClass parent_class;
 };
 
+#define COMMON_GROUP  "Common"
+#define RESIZE_GROUP  "Resize"
+#define ROTATE_GROUP  "Rotate"
+#define CONVERT_GROUP "Convert"
+#define ROUND_GROUP   "RoundingCorners"
+#define EFFECTS_GROUP "AddEffect"
+#define MARKER_GROUP  "DrawWatermark"
+
 
 GType nim_dialog_get_type (void);
 
 NimDialog *nim_dialog_new (GtkWindow *parent_window, gint dialog_type);
 gint nim_dialog_run (NimDialog *this);
+gchar *nim_dialog_get_data (NimDialog *this, gsize *length);
 
 gint nim_dialog_config_get_data (NimDialog *this);
 
