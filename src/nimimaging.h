@@ -54,6 +54,7 @@ enum {
 };
 
 enum {
+  NIM_EFFECT_NORMALIZE,
   NIM_EFFECT_ENHANCE,
   NIM_EFFECT_EQUALIZE,
   NIM_EFFECT_SHARPEN,
@@ -61,6 +62,7 @@ enum {
   NIM_EFFECT_SHADOW,
   NIM_EFFECT_BLUR,
   NIM_EFFECT_MOTION,
+  NIM_EFFECT_RADIAL_BLUR,
   NIM_EFFECT_OIL,
   NIM_EFFECT_SKETCH,
   NIM_EFFECT_SPREAD,
@@ -68,6 +70,11 @@ enum {
   NIM_EFFECT_FLOP,
   NIM_EFFECT_NEGATIVE,
   NIM_EFFECT_NEGATIVE_MONO,
+  NIM_EFFECT_CHARCOAL,
+  NIM_EFFECT_EDGE,
+  NIM_EFFECT_EMBROSS,
+  NIM_EFFECT_GAUSSIAN,
+  NIM_EFFECT_ROLL,
 };
 
 enum {
@@ -133,6 +140,7 @@ MagickWand* nim_imaging_effect                  (gchar     *filename,
                                                  gdouble       off_y,
                                                  gdouble      radius,
                                                  gdouble       sigma,
+                                                 gdouble       angle,
                                                  gboolean enable_bg);
 
 gboolean nim_imaging_effect_from_wand           (MagickWand    **wand,
@@ -141,6 +149,7 @@ gboolean nim_imaging_effect_from_wand           (MagickWand    **wand,
                                                   gdouble        offy,
                                                   gdouble      radius,
                                                   gdouble       sigma,
+                                                  gdouble       angle,
                                                   gboolean enable_bg);
 
 gboolean    nim_imaging_convert_to_gif          (gchar  **filelist,

@@ -267,6 +267,7 @@ gboolean nim_imaging_effect_from_wand (MagickWand   **wand,
                                         gdouble       offy,
                                         gdouble     radius,
                                         gdouble      sigma,
+                                        gdouble      angle,
                                         gboolean enable_bg)
 {
   gboolean response = FALSE;
@@ -368,6 +369,7 @@ MagickWand* nim_imaging_effect  (gchar     *filename,
                                  gdouble       off_y,
                                  gdouble      radius,
                                  gdouble       sigma,
+                                 gdouble       angle,
                                  gboolean  enable_bg)
 {
   MagickWand *image_wand;
@@ -377,7 +379,7 @@ MagickWand* nim_imaging_effect  (gchar     *filename,
 
   if (MagickReadImage (image_wand, filename) == MagickTrue)
   {
-    nim_imaging_effect_from_wand (&image_wand, effect, off_x, off_y, radius, sigma, enable_bg);
+    nim_imaging_effect_from_wand (&image_wand, effect, off_x, off_y, radius, sigma, angle, enable_bg);
     return image_wand;
   }
 
@@ -390,9 +392,8 @@ MagickWand* nim_imaging_effect  (gchar     *filename,
 
 
 //------------------------------------------------------------------------------
-static MagickWand* nim_imaging_draw_text (const gchar *text,
+static MagickWand* nim_imaging_text (const gchar *text,
                                           const gchar *font_desc,
-                                          guint font_size,
                                           const gchar *fg_color)
 {
   MagickWand *result_wand;
@@ -658,7 +659,7 @@ int main(int argc, char **argv)
 {
   MagickWand *wand;
   gint function = 0, angle = 0, width, height, mode;
-  const gchar *filename, *color;
+  const gchar *filename, *color, *font, *text;
   gchar *format;
   gdouble corners [NIM_CORNER_LAST] = {15.0, 15.0, 15.0, 15.0};
 
@@ -691,6 +692,10 @@ g_print ("Rotate\n");
         wand = nim_imaging_rotate (filename, angle * -1, "#aaaaaaaa");
         break;
       case 2: // text marker
+        font = argv [2];
+        color = argv [3];
+        text = argv [4];
+        wand = nim_imaging_text (text, font, color);
       case 3: // image marker
       default:
         g_print ("Unknown function\n");

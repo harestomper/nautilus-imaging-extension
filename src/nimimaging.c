@@ -217,6 +217,7 @@ gboolean nim_imaging_effect_from_wand (MagickWand   **wand,
                                         gdouble       offy,
                                         gdouble     radius,
                                         gdouble      sigma,
+                                        gdouble      angle,
                                         gboolean enable_bg)
 {
   gboolean response = FALSE;
@@ -238,8 +239,16 @@ gboolean nim_imaging_effect_from_wand (MagickWand   **wand,
 
   switch (effect) {
 
+    case NIM_EFFECT_ROLL:
+      response = MagickRollImage (result_wand, offx, offy) == MagickTrue;
+      break;
+
     case NIM_EFFECT_BLUR:
       response = MagickBlurImage (result_wand, radius, sigma) == MagickTrue;
+      break;
+
+    case NIM_EFFECT_RADIAL_BLUR:
+      response = MagickRadialBlurImage (result_wand, angle) == MagickTrue;
       break;
 
     case NIM_EFFECT_SHARPEN:
@@ -247,7 +256,7 @@ gboolean nim_imaging_effect_from_wand (MagickWand   **wand,
       break;
 
     case NIM_EFFECT_MOTION:
-      response = MagickMotionBlurImage (result_wand, radius, sigma, 0);
+      response = MagickMotionBlurImage (result_wand, radius, sigma, angle);
       break;
 
     case NIM_EFFECT_OIL:
@@ -255,7 +264,7 @@ gboolean nim_imaging_effect_from_wand (MagickWand   **wand,
       break;
 
     case NIM_EFFECT_SKETCH:
-      response = MagickSketchImage (result_wand, radius, sigma, 0);
+      response = MagickSketchImage (result_wand, radius, sigma, angle);
       break;
       
     case NIM_EFFECT_SPREAD:
@@ -264,6 +273,10 @@ gboolean nim_imaging_effect_from_wand (MagickWand   **wand,
       
     case NIM_EFFECT_ENHANCE:
       response = MagickEnhanceImage (result_wand);
+      break;
+      
+    case NIM_EFFECT_NORMALIZE:
+      response = MagickNormalizeImage (result_wand);
       break;
       
     case NIM_EFFECT_EQUALIZE:
@@ -293,7 +306,23 @@ gboolean nim_imaging_effect_from_wand (MagickWand   **wand,
     case NIM_EFFECT_NEGATIVE:
       response = MagickNegateImage (result_wand, MagickFalse);
       break;
-      
+
+    case NIM_EFFECT_CHARCOAL:
+      response = MagickCharcoalImage (result_wand, radius, sigma);
+      break;
+
+    case NIM_EFFECT_EDGE:
+      response = MagickEdgeImage (result_wand, radius);
+      break;
+
+    case NIM_EFFECT_EMBROSS:
+      response = MagickEmbossImage (result_wand, radius, sigma);
+      break;
+
+    case NIM_EFFECT_GAUSSIAN:
+      response = MagickGaussianBlurImage (result_wand, radius, sigma);
+      break;
+    
     case NIM_EFFECT_SHADOW:
     default:
 
@@ -367,6 +396,7 @@ MagickWand* nim_imaging_effect  (gchar     *filename,
                                  gdouble       off_y,
                                  gdouble      radius,
                                  gdouble       sigma,
+                                 gdouble       angle,
                                  gboolean  enable_bg)
 {
   MagickWand *image_wand;
@@ -376,7 +406,7 @@ MagickWand* nim_imaging_effect  (gchar     *filename,
 
   if (MagickReadImage (image_wand, filename) == MagickTrue)
   {
-    nim_imaging_effect_from_wand (&image_wand, effect, off_x, off_y, radius, sigma, enable_bg);
+    nim_imaging_effect_from_wand (&image_wand, effect, off_x, off_y, radius, sigma, angle, enable_bg);
     return image_wand;
   }
 
@@ -646,6 +676,13 @@ gboolean magick_is_animation (MagickWand *wand)
   g_free (tmpfmt);
 
   return response;
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+MagickWand* nim_imaging_draw_text (const gchar *text, const gchar *fontname, const gchar *foreground)
+{
 }
 //------------------------------------------------------------------------------
 

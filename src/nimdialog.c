@@ -58,7 +58,7 @@
 #define DEFAULT_ROUND_BL              10
 #define DEFAULT_ROUND_BR              10
 
-#define DEFAULT_EFFECT_TYPE           NIM_EFFECT_ENHANCE
+#define DEFAULT_EFFECT_TYPE           NIM_EFFECT_NORMALIZE
 #define DEFAULT_EFFECT_OFFX           8
 #define DEFAULT_EFFECT_OFFY           8
 #define DEFAULT_EFFECT_RADIUS         10.0
@@ -375,11 +375,12 @@ static void nim_dialog_effect_widget_changed_worker (NimDialog *this)
   GObject *radius_spin;
   GObject *sigma_spin;
   GObject *effect_type;
+  GObject *angle_spin;
   GObject *image;
   GdkPixbuf *pixbuf;
   MagickWand *wand;
   gboolean enable_bg;
-  gdouble offx, offy, radius, sigma, efftype;
+  gdouble offx, offy, radius, sigma, efftype, angle;
 
   priv = this->priv;
   priv->user_data = NULL;
@@ -408,6 +409,7 @@ static void nim_dialog_effect_widget_changed_worker (NimDialog *this)
   radius_spin = gtk_builder_get_object (priv->builder, "effect_radius_spin");
   sigma_spin = gtk_builder_get_object (priv->builder, "effect_sigma_spin");
   effect_type = gtk_builder_get_object (priv->builder, "effect_type_combo");
+  angle_spin = gtk_builder_get_object (priv->builder, "effect_angle_spin");
 
   offx = gtk_spin_button_get_value (GTK_SPIN_BUTTON (offx_spin));
   offy = gtk_spin_button_get_value (GTK_SPIN_BUTTON (offy_spin));
@@ -415,16 +417,17 @@ static void nim_dialog_effect_widget_changed_worker (NimDialog *this)
   sigma = gtk_spin_button_get_value (GTK_SPIN_BUTTON (sigma_spin));
   efftype = gtk_combo_box_get_active (GTK_COMBO_BOX (effect_type));
   enable_bg = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (background));
+  angle = gtk_spin_button_get_value (GTK_SPIN_BUTTON (angle_spin));
 
   if (IsMagickWand (priv->preview_wand)) {
     wand = CloneMagickWand (priv->preview_wand);
-    nim_imaging_effect_from_wand (&wand, efftype, offx, offy, radius, sigma, enable_bg);
+    nim_imaging_effect_from_wand (&wand, efftype, offx, offy, radius, sigma, angle, enable_bg);
     nim_imaging_resize_from_wand (&wand,
                                    DEFAULT_PREVIEW_WIDTH,
                                    DEFAULT_PREVIEW_HEIGHT,
                                    NIM_RESIZE_BOTH,
                                    TRUE,
-                                   Lanczos2Filter,
+                                   LanczosFilter,
                                    1.0);
   } else {
     return;
@@ -473,24 +476,36 @@ static void nim_dialog_effect_type_combo_changed (GtkComboBox *combo, NimDialog 
   anglebox = gtk_builder_get_object (priv->builder, "effect_angle_box");
   bgbox = gtk_builder_get_object (priv->builder, "effect_enable_bg_button");
 
-  offxactive = active == NIM_EFFECT_SHADOW;
-  offyactive = active == NIM_EFFECT_SHADOW;
+  offxactive = active == NIM_EFFECT_SHADOW
+            || active == NIM_EFFECT_ROLL;
+            
+  offyactive = active == NIM_EFFECT_SHADOW
+            || active == NIM_EFFECT_ROLL;
+
   bgactive = active == NIM_EFFECT_SHADOW;
   radiusactive = active == NIM_EFFECT_BLUR
              || active == NIM_EFFECT_SHARPEN
              || active == NIM_EFFECT_MOTION
              || active == NIM_EFFECT_OIL
              || active == NIM_EFFECT_SKETCH
-             || active == NIM_EFFECT_SPREAD;
+             || active == NIM_EFFECT_SPREAD
+             || active == NIM_EFFECT_CHARCOAL
+             || active == NIM_EFFECT_EDGE
+             || active == NIM_EFFECT_EMBROSS
+             || active == NIM_EFFECT_GAUSSIAN;
              
   sigmaactive = active == NIM_EFFECT_SHADOW
              || active == NIM_EFFECT_BLUR
              || active == NIM_EFFECT_SHARPEN
              || active == NIM_EFFECT_MOTION
-             || active == NIM_EFFECT_SKETCH;
+             || active == NIM_EFFECT_SKETCH
+             || active == NIM_EFFECT_CHARCOAL
+             || active == NIM_EFFECT_EMBROSS
+             || active == NIM_EFFECT_GAUSSIAN;
 
   angleactive = active == NIM_EFFECT_SKETCH
-             || active == NIM_EFFECT_MOTION;
+             || active == NIM_EFFECT_MOTION
+             || active == NIM_EFFECT_RADIAL_BLUR;
 
   nim_dialog_widget_set_visible (GTK_WIDGET (offxbox), offxactive);
   nim_dialog_widget_set_visible (GTK_WIDGET (offybox), offyactive);
