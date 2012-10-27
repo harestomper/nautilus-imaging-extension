@@ -743,11 +743,11 @@ static GObject* nim_dialog_set_default (NimDialog *this,
       if (vchar) g_free (vchar);
 
     } else if (GTK_IS_COLOR_BUTTON (object)) {
-      GdkRGBA rgba = {0};
+      GdkColor color = {0};
       vchar = g_key_file_get_string (priv->config, group, wname, NULL);
 
-      if (vchar && gdk_rgba_parse (&rgba, vchar))
-        gtk_color_button_set_rgba (GTK_COLOR_BUTTON (object), &rgba);
+      if (vchar && gdk_color_parse (vchar, &color))
+        gtk_color_button_set_color (GTK_COLOR_BUTTON (object), &color);
 
       if (vchar) g_free (vchar);
 
@@ -806,11 +806,11 @@ static void nim_dialog_write_value (NimDialog *this, GObject *object)
       g_key_file_set_string (priv->config, group, wname, vchar);
 
     } else if (GTK_IS_COLOR_BUTTON (object)) {
-      GdkRGBA rgba = {0};
+      GdkColor color = {0};
       gchar *value;
 
-      gtk_color_button_get_rgba (GTK_COLOR_BUTTON (object), &rgba);
-      value = gdk_rgba_to_string (&rgba);
+      gtk_color_button_get_color (GTK_COLOR_BUTTON (object), &color);
+      value = gdk_color_to_string (&color);
 
       if (value) {
         g_key_file_set_string (priv->config, group, wname, value);
@@ -1055,10 +1055,13 @@ static void nim_dialog_marker_init (NimDialog *this)
                               G_CALLBACK (nim_dialog_simple_callback));
   nim_dialog_set_default (this, MARKER_GROUP, "water_text_entry",
                               G_CALLBACK (nim_dialog_simple_callback));
-  nim_dialog_set_default (this, MARKER_GROUP, "water_font_button",
+  button = nim_dialog_set_default (this, MARKER_GROUP, "water_font_button",
                               G_CALLBACK (nim_dialog_simple_callback));
-  nim_dialog_set_default (this, MARKER_GROUP, "water_font_color",
+  gtk_font_chooser_set_preview_text (GTK_FONT_CHOOSER (button), "Preview text");
+  button = nim_dialog_set_default (this, MARKER_GROUP, "water_font_color",
                               G_CALLBACK (nim_dialog_simple_callback));
+  gtk_color_button_set_use_alpha (GTK_COLOR_BUTTON (button), TRUE);
+  
   nim_dialog_set_default (this, MARKER_GROUP, "water_opacity_spin",
                               G_CALLBACK (nim_dialog_simple_callback));
   nim_dialog_set_default (this, MARKER_GROUP, "water_pitch_spin",

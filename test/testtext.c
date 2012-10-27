@@ -235,8 +235,8 @@ int main (int argc, char **argv)
     // Полученное название шрифта с размером нужно разделить на шрифт и размер
     // и имя шрифта привести к такому виду
 //    DrawSetFont (draw_wand, "Ubuntu-Bold-Italic");
-    DrawSetFont (draw_wand, "Bitstream-Vera-Sans-Mono-Bold-Oblique");
-    DrawSetFontSize (draw_wand, 100);
+    DrawSetFont (draw_wand, "Bitstream-Vera-Sans-Mono-Bold-Oblique-100");
+//    DrawSetFontSize (draw_wand, 100);
     DrawSetTextAntialias (draw_wand, MagickTrue);
 
     // Получить размеры текста массивом
