@@ -392,9 +392,7 @@ MagickWand* nim_imaging_effect  (gchar     *filename,
 
 
 //------------------------------------------------------------------------------
-static MagickWand* nim_imaging_text (const gchar *text,
-                                          const gchar *font_desc,
-                                          const gchar *fg_color)
+static MagickWand* nim_imaging_text (const gchar *text, const gchar *font_desc, const gchar *fg_color)
 {
   MagickWand *result_wand;
   PixelWand *foreground;
@@ -407,7 +405,7 @@ static MagickWand* nim_imaging_text (const gchar *text,
   draw_wand = NewDrawingWand ();
 
   PixelSetColor (background, "#00000000");
-  PixelSetColor (foreground, "#00000077");
+  PixelSetColor (foreground, fg_color);
   MagickNewImage (result_wand, font_size * 2, 150, background);
   DrawSetFillColor (draw_wand, foreground);
   //DrawSetFillOpacity (draw_wand, 10);

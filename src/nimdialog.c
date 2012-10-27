@@ -68,7 +68,7 @@
 
 #define DEFAULT_MARKER_TEXT_TYPE      TRUE
 #define DEFAULT_MARKER_TEXT           "My image:)"
-#define DEFAULT_MARKER_FONT           "Sans 25"
+#define DEFAULT_MARKER_FONT           "Sans 72"
 #define DEFAULT_MARKER_FG             "rgba (255, 255, 255, 128)"
 #define DEFAULT_MARKER_OPACITY        80.0
 #define DEFAULT_MARKER_METHOD         NIM_WATER_METHOD_ALIGN
