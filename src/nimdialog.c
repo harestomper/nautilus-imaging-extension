@@ -38,7 +38,7 @@
 
 #define DEFAULT_ROTATE_MODE           NIM_ROTATE_90
 #define DEFAULT_ROTATE_ANGLE          90.0
-#define DEFAULT_ROTATE_COLOR          "rgba (0, 0, 0, 0)"
+#define DEFAULT_ROTATE_COLOR          "#000000ff"
 
 #define DEFAULT_RESIZE_MODE           NIM_RESIZE_BOTH
 #define DEFAULT_RESIZE_WIDTH          1024
@@ -69,12 +69,18 @@
 #define DEFAULT_MARKER_TEXT_TYPE      TRUE
 #define DEFAULT_MARKER_TEXT           "My image:)"
 #define DEFAULT_MARKER_FONT           "Sans 72"
-#define DEFAULT_MARKER_FG             "rgba (255, 255, 255, 128)"
+#define DEFAULT_MARKER_FONT_SIZE      72
+#define DEFAULT_MARKER_FG             "#ffffffff"
 #define DEFAULT_MARKER_OPACITY        80.0
 #define DEFAULT_MARKER_METHOD         NIM_WATER_METHOD_ALIGN
 #define DEFAULT_MARKER_PITCH          0.0
 #define DEFAULT_MARKER_X              10.0
 #define DEFAULT_MARKER_Y              10.0
+#define DEFAULT_MARKER_ABS_X          10
+#define DEFAULT_MARKER_ABS_Y          10
+#define DEFAULT_MARKER_ADAPTIVE       FALSE
+#define DEFAULT_MARKER_TEXT_EFFECT    NIM_WATER_TEXT_EFFECT_FLAT
+#define DEFAULT_MARKER_FILE           FALSE
 
 #define DEFAULT_COMMON_TYPE           NIM_SAVE_MARK
 #define DEFAULT_COMMON_SUFFIX         "modified"
@@ -607,18 +613,23 @@ static void nim_dialog_water_file_update_preview (GtkFileChooser *chooser, NimDi
 
 
 //------------------------------------------------------------------------------
-static void nim_dialog_water_file_button_activated (GtkWidget *widget, NimDialog *this)
+static void nim_dialog_water_file_button_toggled (GtkWidget *widget, NimDialog *this)
 {
   NimDialogPrivate *priv;
-  GtkWidget *entry;
+  GObject *entry;
   GtkWidget *fcdialog;
-  GtkWidget *dialog;
+  GObject *dialog;
   GtkFileFilter *filter;
   GtkWidget *preview;
   gint response;
+  gboolean active;
 
   priv = this->priv;
-  dialog = (GtkWidget *) gtk_builder_get_object (priv->builder, "dialog1");
+
+  if (GTK_IS_TOGGLE_BUTTON (widget) && !gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (widget)))
+    return;
+    
+  dialog = gtk_builder_get_object (priv->builder, "dialog1");
   fcdialog = gtk_file_chooser_dialog_new (NULL,
                                           GTK_WINDOW (dialog),
                                           GTK_FILE_CHOOSER_ACTION_OPEN,
@@ -629,7 +640,7 @@ static void nim_dialog_water_file_button_activated (GtkWidget *widget, NimDialog
                                           NULL);
   preview = gtk_image_new ();
   filter = gtk_file_filter_new ();
-  entry = (GtkWidget *) gtk_builder_get_object (priv->builder, "water_file_entry");
+  entry = gtk_builder_get_object (priv->builder, "water_file");
 
   gtk_file_filter_add_pixbuf_formats (filter);
   gtk_file_chooser_set_filter (GTK_FILE_CHOOSER (fcdialog), filter);
@@ -661,13 +672,24 @@ static void nim_dialog_water_method_changed (GtkComboBox *combo, NimDialog *this
 {
   NimDialogPrivate *priv;
   GObject *alignbox;
+  GObject *commonbox;
+  GObject *absbox;
   gint active;
 
   priv = this->priv;
   alignbox = gtk_builder_get_object (priv->builder, "water_align_box");
+  absbox = gtk_builder_get_object (priv->builder, "water_abs_box");
+  commonbox = gtk_builder_get_object (priv->builder, "water_align_common_box");
   active = gtk_combo_box_get_active (combo);
-  gtk_widget_set_sensitive (GTK_WIDGET (alignbox), active == NIM_WATER_METHOD_ALIGN);
+  
+  gtk_widget_set_sensitive (GTK_WIDGET (commonbox),
+                                  active == NIM_WATER_METHOD_ALIGN
+                               || active == NIM_WATER_METHOD_ABS);
+
+  nim_dialog_widget_set_visible (GTK_WIDGET (alignbox), active < NIM_WATER_METHOD_ABS);
+  nim_dialog_widget_set_visible (GTK_WIDGET (absbox), active == NIM_WATER_METHOD_ABS);
   nim_dialog_write_value (this, G_OBJECT (combo));
+  g_print ("%s: %d\n", G_STRLOC, active);
 }
 //------------------------------------------------------------------------------
 
@@ -819,8 +841,15 @@ static void nim_dialog_write_value (NimDialog *this, GObject *object)
 
     } else if (GTK_IS_FONT_BUTTON (object)) {
       const gchar *font;
+      gint fontsize;
+      gchar *fontsize_key;
+
+      fontsize_key = g_strdup_printf ("%s:size", wname);
       font = gtk_font_button_get_font_name (GTK_FONT_BUTTON (object));
+      fontsize = gtk_font_chooser_get_font_size (GTK_FONT_CHOOSER (object));
       g_key_file_set_string (priv->config, group, wname, font);
+      g_key_file_set_integer (priv->config, group, fontsize_key, fontsize);
+      g_free (fontsize_key);
     }
   }
 }
@@ -858,21 +887,28 @@ static void nim_dialog_config_init (NimDialog *this)
       g_key_file_set_integer (priv->config, ROTATE_GROUP, "rotate_angle_combo", DEFAULT_ROTATE_MODE);
       g_key_file_set_string (priv->config, ROTATE_GROUP, "rotate_color_button", DEFAULT_ROTATE_COLOR);
       g_key_file_set_double (priv->config, ROTATE_GROUP, "rotate_angle_spin", DEFAULT_ROTATE_ANGLE);
+
       g_key_file_set_string (priv->config, COMMON_GROUP, "save_choose_entry", DEFAULT_COMMON_FOLDER);
       g_key_file_set_string (priv->config, COMMON_GROUP, "save_suffix_entry", DEFAULT_COMMON_SUFFIX);
       g_key_file_set_boolean (priv->config, COMMON_GROUP, "save_overwrite_radio", DEFAULT_COMMON_TYPE == NIM_SAVE_OVER);
       g_key_file_set_boolean (priv->config, COMMON_GROUP, "save_suffix_radio", DEFAULT_COMMON_TYPE == NIM_SAVE_MARK);
       g_key_file_set_boolean (priv->config, COMMON_GROUP, "save_choose_radio", DEFAULT_COMMON_TYPE == NIM_SAVE_OTHER);
-      g_key_file_set_double (priv->config, MARKER_GROUP, "water_alignx_spin", DEFAULT_MARKER_X);
-      g_key_file_set_double (priv->config, MARKER_GROUP, "water_aligny_spin", DEFAULT_MARKER_Y);
-      g_key_file_set_double (priv->config, MARKER_GROUP, "water_pitch_spin", DEFAULT_MARKER_PITCH);
-      g_key_file_set_integer (priv->config, MARKER_GROUP, "water_method_combo", DEFAULT_MARKER_METHOD);
-      g_key_file_set_double (priv->config, MARKER_GROUP, "water_opacity_spin", DEFAULT_MARKER_OPACITY);
+
+      g_key_file_set_double (priv->config, MARKER_GROUP, "water_alignx", DEFAULT_MARKER_X);
+      g_key_file_set_double (priv->config, MARKER_GROUP, "water_aligny", DEFAULT_MARKER_Y);
+      g_key_file_set_double (priv->config, MARKER_GROUP, "water_absx", DEFAULT_MARKER_ABS_X);
+      g_key_file_set_double (priv->config, MARKER_GROUP, "water_absy", DEFAULT_MARKER_ABS_Y);
+      g_key_file_set_boolean (priv->config, MARKER_GROUP, "water_adaptive_size", DEFAULT_MARKER_ADAPTIVE);
+      g_key_file_set_integer (priv->config, MARKER_GROUP, "water_text_effect", DEFAULT_MARKER_TEXT_EFFECT);
+      g_key_file_set_boolean (priv->config, MARKER_GROUP, "water_file", DEFAULT_MARKER_FILE);
+      g_key_file_set_double (priv->config, MARKER_GROUP, "water_pitch", DEFAULT_MARKER_PITCH);
+      g_key_file_set_integer (priv->config, MARKER_GROUP, "water_method", DEFAULT_MARKER_METHOD);
+      g_key_file_set_double (priv->config, MARKER_GROUP, "water_opacity", DEFAULT_MARKER_OPACITY);
       g_key_file_set_string (priv->config, MARKER_GROUP, "water_font_color", DEFAULT_MARKER_FG);
-      g_key_file_set_string (priv->config, MARKER_GROUP, "water_font_button", DEFAULT_MARKER_FONT);
-      g_key_file_set_string (priv->config, MARKER_GROUP, "water_text_entry", DEFAULT_MARKER_TEXT);
-      g_key_file_set_boolean (priv->config, MARKER_GROUP, "water_text_radio", DEFAULT_MARKER_TEXT_TYPE == TRUE);
-      g_key_file_set_boolean (priv->config, MARKER_GROUP, "water_file_radio", DEFAULT_MARKER_TEXT_TYPE == FALSE);
+      g_key_file_set_string (priv->config, MARKER_GROUP, "water_font", DEFAULT_MARKER_FONT);
+      g_key_file_set_integer (priv->config, MARKER_GROUP, "water_font:size", DEFAULT_MARKER_FONT_SIZE);
+      g_key_file_set_string (priv->config, MARKER_GROUP, "water_entry", DEFAULT_MARKER_TEXT);
+
       g_key_file_set_boolean (priv->config, EFFECTS_GROUP, "effect_enable_bg_button", DEFAULT_EFFECT_BG);
       g_key_file_set_double (priv->config, EFFECTS_GROUP, "effect_angle_spin", DEFAULT_EFFECT_ANGLE);
       g_key_file_set_double (priv->config, EFFECTS_GROUP, "effect_sigma_spin", DEFAULT_EFFECT_SIGMA);
@@ -880,15 +916,18 @@ static void nim_dialog_config_init (NimDialog *this)
       g_key_file_set_double (priv->config, EFFECTS_GROUP, "effect_offsety_spin", DEFAULT_EFFECT_OFFY);
       g_key_file_set_double (priv->config, EFFECTS_GROUP, "effect_offsetx_spin", DEFAULT_EFFECT_OFFX);
       g_key_file_set_integer (priv->config, EFFECTS_GROUP, "effect_type_combo", DEFAULT_EFFECT_TYPE);
+
       g_key_file_set_integer (priv->config, ROUND_GROUP, "round_tl_spin", DEFAULT_ROUND_TL);
       g_key_file_set_integer (priv->config, ROUND_GROUP, "round_bl_spin", DEFAULT_ROUND_BL);
       g_key_file_set_integer (priv->config, ROUND_GROUP, "round_tr_spin", DEFAULT_ROUND_TR);
       g_key_file_set_integer (priv->config, ROUND_GROUP, "round_br_spin", DEFAULT_ROUND_BR);
       g_key_file_set_boolean (priv->config, ROUND_GROUP, "round_stick_button", DEFAULT_ROUND_STICK);
+
       g_key_file_set_integer (priv->config, CONVERT_GROUP, "conv_type_combo", DEFAULT_CONVERT_TYPE);
       g_key_file_set_double (priv->config, CONVERT_GROUP, "conv_quality_spin", DEFAULT_CONVERT_QUALITY);
       g_key_file_set_integer (priv->config, CONVERT_GROUP, "conv_speed_spin", DEFAULT_CONVERT_ASPEED);
       g_key_file_set_boolean (priv->config, CONVERT_GROUP, "conv_combine_files", DEFAULT_CONVERT_COMBINE);
+
       g_key_file_set_integer (priv->config, RESIZE_GROUP, "resize_mode_combo",  DEFAULT_RESIZE_MODE);
       g_key_file_set_integer (priv->config, RESIZE_GROUP, "resize_width_spin", DEFAULT_RESIZE_WIDTH);
       g_key_file_set_integer (priv->config, RESIZE_GROUP, "resize_height_spin", DEFAULT_RESIZE_HEIGHT);
@@ -1037,40 +1076,34 @@ static void nim_dialog_marker_init (NimDialog *this)
   GObject *child;
 
   priv = this->priv;
-  button = gtk_builder_get_object (priv->builder, "water_text_radio");
-  child = gtk_builder_get_object (priv->builder, "water_text_box");
-  g_object_set_data (button, NIM_CHILD_WIDGET, child);
 
-  button = gtk_builder_get_object (priv->builder, "water_file_radio");
-  child = gtk_builder_get_object (priv->builder, "water_file_box");
-  g_object_set_data (button, NIM_CHILD_WIDGET, child);
-
-  nim_dialog_set_default (this, MARKER_GROUP, "water_text_radio",
-                              G_CALLBACK (nim_dialog_common_radio_toggled));
-  nim_dialog_set_default (this, MARKER_GROUP, "water_file_radio",
-                              G_CALLBACK (nim_dialog_common_radio_toggled));
-  nim_dialog_set_default (this, MARKER_GROUP, "water_file_button",
-                              G_CALLBACK (nim_dialog_water_file_button_activated));
-  nim_dialog_set_default (this, MARKER_GROUP, "water_file_entry",
+  nim_dialog_set_default (this, MARKER_GROUP, "water_file",
+                              G_CALLBACK (nim_dialog_water_file_button_toggled));
+  nim_dialog_set_default (this, MARKER_GROUP, "water_entry",
                               G_CALLBACK (nim_dialog_simple_callback));
-  nim_dialog_set_default (this, MARKER_GROUP, "water_text_entry",
-                              G_CALLBACK (nim_dialog_simple_callback));
-  button = nim_dialog_set_default (this, MARKER_GROUP, "water_font_button",
+  button = nim_dialog_set_default (this, MARKER_GROUP, "water_font",
                               G_CALLBACK (nim_dialog_simple_callback));
   gtk_font_chooser_set_preview_text (GTK_FONT_CHOOSER (button), "Preview text");
+
   button = nim_dialog_set_default (this, MARKER_GROUP, "water_font_color",
                               G_CALLBACK (nim_dialog_simple_callback));
   gtk_color_button_set_use_alpha (GTK_COLOR_BUTTON (button), TRUE);
   
-  nim_dialog_set_default (this, MARKER_GROUP, "water_opacity_spin",
+  nim_dialog_set_default (this, MARKER_GROUP, "water_opacity",
                               G_CALLBACK (nim_dialog_simple_callback));
-  nim_dialog_set_default (this, MARKER_GROUP, "water_pitch_spin",
+  nim_dialog_set_default (this, MARKER_GROUP, "water_pitch",
                               G_CALLBACK (nim_dialog_simple_callback));
-  nim_dialog_set_default (this, MARKER_GROUP, "water_alignx_spin",
+  nim_dialog_set_default (this, MARKER_GROUP, "water_alignx",
                               G_CALLBACK (nim_dialog_simple_callback));
-  nim_dialog_set_default (this, MARKER_GROUP, "water_aligny_spin",
+  nim_dialog_set_default (this, MARKER_GROUP, "water_aligny",
                               G_CALLBACK (nim_dialog_simple_callback));
-  nim_dialog_set_default (this, MARKER_GROUP, "water_method_combo",
+  nim_dialog_set_default (this, MARKER_GROUP, "water_absx",
+                              G_CALLBACK (nim_dialog_simple_callback));
+  nim_dialog_set_default (this, MARKER_GROUP, "water_absy",
+                              G_CALLBACK (nim_dialog_simple_callback));
+  nim_dialog_set_default (this, MARKER_GROUP, "water_text_effect",
+                              G_CALLBACK (nim_dialog_simple_callback));
+  nim_dialog_set_default (this, MARKER_GROUP, "water_method",
                               G_CALLBACK (nim_dialog_water_method_changed));
 }
 //------------------------------------------------------------------------------

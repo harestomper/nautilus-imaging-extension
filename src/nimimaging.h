@@ -112,7 +112,16 @@ enum {
   NIM_WATER_METHOD_TILE,
   NIM_WATER_METHOD_FIT,
   NIM_WATER_METHOD_ALIGN,
+  NIM_WATER_METHOD_ABS, 
 };
+
+enum {
+  NIM_WATER_TEXT_EFFECT_FLAT,
+  NIM_WATER_TEXT_EFFECT_SHADOWED,
+  NIM_WATER_TEXT_EFFECT_RELIEF,
+  NIM_WATER_TEXT_EFFECT_CONTOUR,
+};
+  
 
 enum {
   NIM_CONVERT_TYPE_PNG,
@@ -179,6 +188,8 @@ gboolean nim_imaging_resize_from_wand (MagickWand **wand,
                                       gdouble factor);
 
 gboolean magick_is_animation (MagickWand *wand);
+MagickWand* nim_imaging_draw_text_simple (const gchar *text, const gchar *fontname, gint fontsize, const gchar *foreground);
+
 
 G_END_DECLS
 

@@ -681,8 +681,45 @@ gboolean magick_is_animation (MagickWand *wand)
 
 
 //------------------------------------------------------------------------------
-MagickWand* nim_imaging_draw_text (const gchar *text, const gchar *fontname, const gchar *foreground)
+static gchar *normalize_fontname (const gchar *fontname)
 {
+  gchar *sym, *copyname;
+
+  if (fontname == NULL)
+    return g_strdup ("Sans-Bold-Italic");
+
+  copyname = g_strdup (fontname);
+
+  for (sym = copyname; ; sym++) {
+    if (*sym == '\0') break;
+    if (*sym == ' ') *sym = '-';
+  }
+
+  return copyname;
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+MagickWand* nim_imaging_draw_text_simple (const gchar *text, const gchar *fontname, gint fontsize, const gchar *fground)
+{
+  MagickWand *result_wand;
+  MagickWand *temp_wand;
+  PixelWand *background;
+  PixelWand *foreground;
+  DrawingWand *draw_wand;
+  gchar *font_name;
+  gdouble *textsize;
+
+  font_name = normalize_fontname (fontname);
+  result_wand = NewMagickWand ();
+  temp_wand = NewMagickWand ();
+  background = NewPixelWand ();
+  foreground = NewPixelWand ();
+
+  PixelSetColor (foreground, fground);
+//  PixelSetColor ()
+  DrawSetFillColor (draw_wand, foreground);
 }
 //------------------------------------------------------------------------------
 

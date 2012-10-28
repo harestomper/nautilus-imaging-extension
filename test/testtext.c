@@ -20,9 +20,10 @@
  */
 
 #include <string.h>
+#include <time.h>
 #include <wand/magick_wand.h>
 
-// gcc -Wall `pkg-config --cflags --libs MagickWand` -o testtext testtext.c 
+// gcc -Wall -o testtext testtext.c  `pkg-config --cflags --libs MagickWand,MagickCore`
 // The pattern_name MUST have a leading #
 /*
 void set_tile_pattern (DrawingWand *d_wand, char *pattern_name, char *pattern_file)
@@ -224,19 +225,19 @@ int main (int argc, char **argv)
 
 
     // 'rgba' Не читает нормаьлно
-    PixelSetColor (foreground, "#00000077");
+    PixelSetColor (foreground, "#007700ff");
     DrawSetFillColor (draw_wand, foreground);
 
     // Создать Wand любого размера, только чтобы было что подсунуть для DrawingWand
     result_wand = NewMagickWand ();
-    PixelSetColor (background, "#00000000");
+    PixelSetColor (background, "none"); //"#00000000");
     MagickNewImage (result_wand, 1, 1, background);
 
     // Полученное название шрифта с размером нужно разделить на шрифт и размер
     // и имя шрифта привести к такому виду
-//    DrawSetFont (draw_wand, "Ubuntu-Bold-Italic");
-    DrawSetFont (draw_wand, "Bitstream-Vera-Sans-Mono-Bold-Oblique-100");
-//    DrawSetFontSize (draw_wand, 100);
+    DrawSetFont (draw_wand, "Ubuntu-Bold-Italic");
+//    DrawSetFont (draw_wand, "Bitstream-Vera-Sans-Mono-Bold-Oblique-100");
+    DrawSetFontSize (draw_wand, 100);
     DrawSetTextAntialias (draw_wand, MagickTrue);
 
     // Получить размеры текста массивом
@@ -263,15 +264,19 @@ int main (int argc, char **argv)
 
     // Обрезать лишнее прозрачное
     MagickTrimImage (result_wand, 0);
+    MagickSetImageType (result_wand, TrueColorType);
 
     // Готово
     MagickWriteImage (result_wand, "text-draw.png");
 
+    // Можно посмотреть что получилось в превью
+//    MagickDisplayImage (result_wand, ":0");
+    
     draw_wand = DestroyDrawingWand (draw_wand);
     background = DestroyPixelWand (background);
     foreground = DestroyPixelWand (foreground);
 
-        MagickWandTerminus ();
+    MagickWandTerminus ();
 
     return 0;
 }
