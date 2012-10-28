@@ -29,6 +29,7 @@ gcc -Wall `pkg-config --cflags --libs gobject-2.0,gtk+-3.0,glib-2.0` -o dialog-t
 #include <glib-object.h>
 #include <gtk/gtk.h>
 #include "nimdialog.h"
+#include "nimimaging.h"
 
 int main (int argc, char **argv)
 {
@@ -42,16 +43,34 @@ int main (int argc, char **argv)
   
   gtk_init (&argc, &argv);
   NimDialog *dialog;
+  GKeyFile *config;
+  MagickWand *wand;
+  gchar *fontname;
+  gchar *text;
+  gint fontsize;
+  gchar *foreground;
   gint dialog_type = 0;
   gchar *data;
 
   if (argc > 1) 
     dialog_type = (gint) g_ascii_strtoll (argv [1], NULL, 10);
-    
+
   dialog = nim_dialog_new (NULL, dialog_type);
-  nim_dialog_run (dialog);
-  data = nim_dialog_get_data (dialog, NULL);
-  g_print ("%s\n", data);
+
+  if (nim_dialog_run (dialog) == GTK_RESPONSE_APPLY) {
+    config = g_key_file_new ();
+    data = nim_dialog_get_data (dialog, NULL);
+    g_key_file_load_from_data (config, data, -1, 0, NULL);
+    fontname = g_key_file_get_string (config, MARKER_GROUP, "water_font", NULL);
+    fontsize = g_key_file_get_integer (config, MARKER_GROUP, "water_font:size", NULL);
+    text = g_key_file_get_string (config, MARKER_GROUP, "water_entry", NULL);
+    foreground = g_key_file_get_string (config, MARKER_GROUP, "water_font_color", NULL);
+    wand = nim_imaging_draw_text_simple (text, fontname, fontsize, foreground, FALSE, 0);
+    nim_imaging_effect_from_wand (&wand, NIM_EFFECT_SHADOW, 0, 0, 0.0, 6.0, 0.0, FALSE);
+    MagickWriteImage (wand, "test/result-text.png");
+    DestroyMagickWand (wand);
+    g_print ("%s\n", data);
+  }
 
   gdk_threads_leave ();
   MagickWandTerminus ();

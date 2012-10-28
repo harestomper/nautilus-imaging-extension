@@ -225,7 +225,7 @@ int main (int argc, char **argv)
 
 
     // 'rgba' Не читает нормаьлно
-    PixelSetColor (foreground, "#007700ff");
+    PixelSetColor (foreground, "#000000ff");
     DrawSetFillColor (draw_wand, foreground);
 
     // Создать Wand любого размера, только чтобы было что подсунуть для DrawingWand
@@ -264,7 +264,7 @@ int main (int argc, char **argv)
 
     // Обрезать лишнее прозрачное
     MagickTrimImage (result_wand, 0);
-    MagickSetImageType (result_wand, TrueColorType);
+//    MagickSetImageType (result_wand, TrueColorType);
 
     // Готово
     MagickWriteImage (result_wand, "text-draw.png");

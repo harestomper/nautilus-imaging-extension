@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <!-- interface-requires gtk+ 3.0 -->
-  <object class="GtkAdjustment" id="angle_adj">
-    <property name="upper">359</property>
-    <property name="value">90</property>
-    <property name="step_increment">1</property>
-    <property name="page_increment">10</property>
-  </object>
   <object class="GtkAdjustment" id="anim_speed_adj">
     <property name="lower">20</property>
     <property name="upper">5000</property>
     <property name="value">100</property>
+    <property name="step_increment">1</property>
+    <property name="page_increment">10</property>
+  </object>
+  <object class="GtkAdjustment" id="angle_adj">
+    <property name="upper">359</property>
+    <property name="value">90</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
@@ -261,8 +261,8 @@
       </object>
     </child>
     <action-widgets>
-      <action-widget response="0">button2</action-widget>
-      <action-widget response="0">button1</action-widget>
+      <action-widget response="-6">button2</action-widget>
+      <action-widget response="-10">button1</action-widget>
     </action-widgets>
   </object>
   <object class="GtkAdjustment" id="effect_angle_adj">
@@ -1216,7 +1216,7 @@ use button.</property>
                                     <property name="action_name">This is the text for an example.</property>
                                     <property name="use_action_appearance">False</property>
                                     <property name="font">Sans 12</property>
-                                    <property name="preview_text"></property>
+                                    <property name="preview_text"/>
                                     <property name="show_preview_entry">False</property>
                                     <property name="use_font">True</property>
                                   </object>
@@ -2287,26 +2287,6 @@ to shadow</property>
       </object>
     </child>
   </object>
-  <object class="GtkAdjustment" id="resize_factor_adj">
-    <property name="lower">-50</property>
-    <property name="upper">50</property>
-    <property name="step_increment">0.10000000000000001</property>
-    <property name="page_increment">10</property>
-  </object>
-  <object class="GtkAdjustment" id="resize_height_adj">
-    <property name="lower">50</property>
-    <property name="upper">10000</property>
-    <property name="value">800</property>
-    <property name="step_increment">1</property>
-    <property name="page_increment">10</property>
-  </object>
-  <object class="GtkAdjustment" id="resize_width_adj">
-    <property name="lower">50</property>
-    <property name="upper">10000</property>
-    <property name="value">1024</property>
-    <property name="step_increment">1</property>
-    <property name="page_increment">10</property>
-  </object>
   <object class="GtkAdjustment" id="round_bl_adj">
     <property name="lower">-255</property>
     <property name="upper">255</property>
@@ -2340,6 +2320,69 @@ to shadow</property>
     <property name="value">15</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
+  </object>
+  <object class="GtkSizeGroup" id="combosizegroup">
+    <widgets>
+      <widget name="effect_type_combo"/>
+      <widget name="water_method"/>
+      <widget name="conv_type_combo"/>
+      <widget name="resize_mode_combo"/>
+      <widget name="resize_filter_combo"/>
+      <widget name="rotate_angle_combo"/>
+      <widget name="water_text_effect"/>
+    </widgets>
+  </object>
+  <object class="GtkSizeGroup" id="entrysizegroup">
+    <property name="mode">vertical</property>
+    <widgets>
+      <widget name="water_file"/>
+      <widget name="water_entry"/>
+      <widget name="save_choose_entry"/>
+      <widget name="save_suffix_entry"/>
+      <widget name="save_choose_button"/>
+    </widgets>
+  </object>
+  <object class="GtkAdjustment" id="resize_factor_adj">
+    <property name="lower">-50</property>
+    <property name="upper">50</property>
+    <property name="step_increment">0.10000000000000001</property>
+    <property name="page_increment">10</property>
+  </object>
+  <object class="GtkAdjustment" id="resize_height_adj">
+    <property name="lower">50</property>
+    <property name="upper">10000</property>
+    <property name="value">800</property>
+    <property name="step_increment">1</property>
+    <property name="page_increment">10</property>
+  </object>
+  <object class="GtkAdjustment" id="resize_width_adj">
+    <property name="lower">50</property>
+    <property name="upper">10000</property>
+    <property name="value">1024</property>
+    <property name="step_increment">1</property>
+    <property name="page_increment">10</property>
+  </object>
+  <object class="GtkSizeGroup" id="spinsizegroup">
+    <widgets>
+      <widget name="rotate_angle_spin"/>
+      <widget name="conv_quality_spin"/>
+      <widget name="conv_speed_gif_spin"/>
+      <widget name="water_opacity"/>
+      <widget name="water_pitch"/>
+      <widget name="water_alignx"/>
+      <widget name="water_aligny"/>
+      <widget name="water_absx"/>
+      <widget name="water_absy"/>
+      <widget name="effect_offsetx_spin"/>
+      <widget name="effect_offsety_spin"/>
+      <widget name="effect_radius_spin"/>
+      <widget name="effect_sigma_spin"/>
+      <widget name="effect_angle_spin"/>
+      <widget name="resize_width_spin"/>
+      <widget name="resize_height_spin"/>
+      <widget name="resize_factor_spin"/>
+      <widget name="rotate_color_button"/>
+    </widgets>
   </object>
   <object class="GtkAdjustment" id="thumb_height_adj">
     <property name="lower">20</property>
@@ -2388,49 +2431,6 @@ to shadow</property>
     <property name="upper">90</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
-  </object>
-  <object class="GtkSizeGroup" id="combosizegroup">
-    <widgets>
-      <widget name="effect_type_combo"/>
-      <widget name="water_method"/>
-      <widget name="conv_type_combo"/>
-      <widget name="resize_mode_combo"/>
-      <widget name="resize_filter_combo"/>
-      <widget name="rotate_angle_combo"/>
-      <widget name="water_text_effect"/>
-    </widgets>
-  </object>
-  <object class="GtkSizeGroup" id="entrysizegroup">
-    <property name="mode">vertical</property>
-    <widgets>
-      <widget name="water_file"/>
-      <widget name="water_entry"/>
-      <widget name="save_choose_entry"/>
-      <widget name="save_suffix_entry"/>
-      <widget name="save_choose_button"/>
-    </widgets>
-  </object>
-  <object class="GtkSizeGroup" id="spinsizegroup">
-    <widgets>
-      <widget name="rotate_angle_spin"/>
-      <widget name="conv_quality_spin"/>
-      <widget name="conv_speed_gif_spin"/>
-      <widget name="water_opacity"/>
-      <widget name="water_pitch"/>
-      <widget name="water_alignx"/>
-      <widget name="water_aligny"/>
-      <widget name="water_absx"/>
-      <widget name="water_absy"/>
-      <widget name="effect_offsetx_spin"/>
-      <widget name="effect_offsety_spin"/>
-      <widget name="effect_radius_spin"/>
-      <widget name="effect_sigma_spin"/>
-      <widget name="effect_angle_spin"/>
-      <widget name="resize_width_spin"/>
-      <widget name="resize_height_spin"/>
-      <widget name="resize_factor_spin"/>
-      <widget name="rotate_color_button"/>
-    </widgets>
   </object>
   <object class="GtkSizeGroup" id="watersizegroup">
     <property name="mode">vertical</property>

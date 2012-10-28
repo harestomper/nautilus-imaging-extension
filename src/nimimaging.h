@@ -136,6 +136,8 @@ enum {
   NIM_SAVE_OTHER
 };
 
+#define NIM_MIN_FONT_SIZE 8
+#define NIM_MAX_FONT_SIZE 1000
 
 MagickWand* nim_imaging_round_corners           (gchar *filename, const gdouble corners [NIM_CORNER_LAST]);
 
@@ -188,7 +190,12 @@ gboolean nim_imaging_resize_from_wand (MagickWand **wand,
                                       gdouble factor);
 
 gboolean magick_is_animation (MagickWand *wand);
-MagickWand* nim_imaging_draw_text_simple (const gchar *text, const gchar *fontname, gint fontsize, const gchar *foreground);
+MagickWand* nim_imaging_draw_text_simple (const gchar *text,
+                                          const gchar *fontname,
+                                          gint fontsize,
+                                          const gchar *fground,
+                                          gboolean stroke,
+                                          gint linewidth);
 
 
 G_END_DECLS

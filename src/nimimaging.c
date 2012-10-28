@@ -681,9 +681,10 @@ gboolean magick_is_animation (MagickWand *wand)
 
 
 //------------------------------------------------------------------------------
-static gchar *normalize_fontname (const gchar *fontname)
+static gchar *normalize_fontname (const gchar *fontname, gint *fontsize)
 {
   gchar *sym, *copyname;
+  gint length = 0, n;
 
   if (fontname == NULL)
     return g_strdup ("Sans-Bold-Italic");
@@ -693,6 +694,12 @@ static gchar *normalize_fontname (const gchar *fontname)
   for (sym = copyname; ; sym++) {
     if (*sym == '\0') break;
     if (*sym == ' ') *sym = '-';
+    length++;
+  }
+
+  if (fontsize) {
+    *fontsize = (gint) strtol (fontname + length - 5, NULL, 10);
+    *fontsize = CLAMP (*fontsize, NIM_MIN_FONT_SIZE, NIM_MAX_FONT_SIZE);
   }
 
   return copyname;
@@ -701,7 +708,32 @@ static gchar *normalize_fontname (const gchar *fontname)
 
 
 //------------------------------------------------------------------------------
-MagickWand* nim_imaging_draw_text_simple (const gchar *text, const gchar *fontname, gint fontsize, const gchar *fground)
+    //  0 character width
+    //  1 character height
+    //  2 ascender
+    //  3 descender
+    //  4 text width
+    //  5 text height
+    //  6 maximum horizontal advance
+enum {
+  TEXT_INFO_CHW,
+  TEXT_INFO_CHH,
+  TEXT_INFO_ASC,
+  TEXT_INFO_DSC,
+  TEXT_INFO_WIDTH,
+  TEXT_INFO_HEIGHT,
+  TEXT_INFO_ADVANCE
+};
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+MagickWand* nim_imaging_draw_text_simple (const gchar *text,
+                                          const gchar *fontname,
+                                          gint fontsize,
+                                          const gchar *fground,
+                                          gboolean stroke,
+                                          gint linewidth)
 {
   MagickWand *result_wand;
   MagickWand *temp_wand;
@@ -709,17 +741,55 @@ MagickWand* nim_imaging_draw_text_simple (const gchar *text, const gchar *fontna
   PixelWand *foreground;
   DrawingWand *draw_wand;
   gchar *font_name;
+  gint font_size;
   gdouble *textsize;
+  gdouble width, height;
 
-  font_name = normalize_fontname (fontname);
+  if (text == NULL || fontname == NULL)
+    return NULL;
+
+  if (fontsize < 8) {
+    font_name = normalize_fontname (fontname, &font_size);
+  } else {  
+    font_name = normalize_fontname (fontname, NULL);
+    if (fontsize >= NIM_MIN_FONT_SIZE * 1024)
+      font_size = (fontsize + 512) >> 10;
+    else
+      font_size = fontsize;
+
+    fontsize = CLAMP (font_size, NIM_MIN_FONT_SIZE, NIM_MAX_FONT_SIZE);
+  }
+  
   result_wand = NewMagickWand ();
   temp_wand = NewMagickWand ();
   background = NewPixelWand ();
   foreground = NewPixelWand ();
+  draw_wand = NewDrawingWand ();
 
   PixelSetColor (foreground, fground);
-//  PixelSetColor ()
+  PixelSetColor (background, "none");
   DrawSetFillColor (draw_wand, foreground);
+
+  MagickNewImage (temp_wand, 1, 1, background);
+  DrawSetFont (draw_wand, font_name);
+  DrawSetFontSize (draw_wand, font_size);
+  DrawSetTextAntialias (draw_wand, MagickTrue);
+  textsize = MagickQueryMultilineFontMetrics (temp_wand, draw_wand, text);
+  width = textsize [4];
+  height = textsize [TEXT_INFO_ASC] - textsize [TEXT_INFO_DSC];
+  MagickNewImage (result_wand, width, height, background);
+  MagickAnnotateImage (result_wand, draw_wand, 0, textsize [TEXT_INFO_ASC], 0.0, text);
+  MagickDrawImage (result_wand, draw_wand);
+  nim_imaging_effect_from_wand (&result_wand, NIM_EFFECT_GAUSSIAN, 0, 0, 3.0, 1.0, 0.0, FALSE);
+  MagickTrimImage (result_wand, 0);
+  
+  temp_wand = DestroyMagickWand (temp_wand);
+  background = DestroyPixelWand (background);
+  foreground = DestroyPixelWand (foreground);
+  draw_wand = DestroyDrawingWand (draw_wand);
+  if (font_name) g_free (font_name);
+
+  return result_wand;
 }
 //------------------------------------------------------------------------------
 
