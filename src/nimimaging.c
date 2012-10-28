@@ -23,6 +23,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <gtk/gtk.h>
+//#include <pango.h>
 #include <math.h>
 #include "nimimaging.h"
 
@@ -683,26 +684,71 @@ gboolean magick_is_animation (MagickWand *wand)
 //------------------------------------------------------------------------------
 static gchar *normalize_fontname (const gchar *fontname, gint *fontsize)
 {
-  gchar *sym, *copyname;
-  gint length = 0, n;
+  gchar *sym;
+//  gint length = 0, n;
+  PangoFontDescription *pangodesc;
+  GString *string;
+  const gchar *family, *weight = NULL, *style = NULL;
+  PangoWeight pangoweight;
+  PangoStyle pangostyle;
 
   if (fontname == NULL)
     return g_strdup ("Sans-Bold-Italic");
 
-  copyname = g_strdup (fontname);
+  pangodesc = pango_font_description_from_string (fontname);
+  family = pango_font_description_get_family (pangodesc);
+  pangoweight = pango_font_description_get_weight (pangodesc);
+  pangostyle = pango_font_description_get_style (pangodesc);
+  string = g_string_new (family);
 
-  for (sym = copyname; ; sym++) {
+  switch (pangoweight) {
+    case PANGO_WEIGHT_THIN: weight = "twin"; break;
+    case PANGO_WEIGHT_ULTRALIGHT: weight = "ultralight"; break;
+    case PANGO_WEIGHT_LIGHT: weight = "light"; break;
+    case PANGO_WEIGHT_BOOK: weight = "book"; break;
+    case PANGO_WEIGHT_NORMAL:  weight = "normal"; break;
+    case PANGO_WEIGHT_MEDIUM: weight = "medium"; break;
+    case PANGO_WEIGHT_SEMIBOLD: weight = "semibold"; break;
+    case PANGO_WEIGHT_BOLD: weight = "bold"; break;
+    case PANGO_WEIGHT_ULTRABOLD: weight = "ultrabold"; break;
+    case PANGO_WEIGHT_HEAVY: weight = "heavy"; break;
+    case PANGO_WEIGHT_ULTRAHEAVY: weight = "ultraheavy"; break;
+    default: break;
+  } 
+
+  switch (pangostyle) {
+      case PANGO_STYLE_OBLIQUE: style = "oblique"; break;
+      case PANGO_STYLE_ITALIC: style = "italic"; break;
+      case PANGO_STYLE_NORMAL: break;
+      default: style = "Normal"; break;
+  }
+    
+  if (fontsize)
+    *fontsize = pango_font_description_get_size (pangodesc);
+
+  for (sym = string->str; ; sym++) {
     if (*sym == '\0') break;
     if (*sym == ' ') *sym = '-';
-    length++;
+    if (*sym == ',') *sym = '-';
   }
 
-  if (fontsize) {
-    *fontsize = (gint) strtol (fontname + length - 5, NULL, 10);
-    *fontsize = CLAMP (*fontsize, NIM_MIN_FONT_SIZE, NIM_MAX_FONT_SIZE);
-  }
+  if (style)
+    g_string_append_printf (string, "-%s", style);
 
-  return copyname;
+  if (weight)
+    g_string_append_printf (string, "-%s", weight);
+
+  pango_font_description_free (pangodesc);
+  return g_string_free (string, FALSE);
+//  copyname = g_strdup (fontname);
+
+
+//  if (fontsize) {
+//    *fontsize = (gint) strtol (fontname + length - 5, NULL, 10);
+//    *fontsize = CLAMP (*fontsize, NIM_MIN_FONT_SIZE, NIM_MAX_FONT_SIZE);
+//  }
+
+//  return copyname;
 }
 //------------------------------------------------------------------------------
 
@@ -759,7 +805,14 @@ MagickWand* nim_imaging_draw_text_simple (const gchar *text,
 
     fontsize = CLAMP (font_size, NIM_MIN_FONT_SIZE, NIM_MAX_FONT_SIZE);
   }
-  
+
+//  gchar **fontlist;
+//  size_t n_elem, n;
+//  fontlist = MagickQueryFonts (fontname, &n_elem);
+//  for (n = 0; n < n_elem; n++)
+//    g_print ("%s\n", fontlist [n]);
+//  if (fontlist) g_strfreev (fontlist);
+  g_print ("%s\n", font_name);
   result_wand = NewMagickWand ();
   temp_wand = NewMagickWand ();
   background = NewPixelWand ();
@@ -780,7 +833,7 @@ MagickWand* nim_imaging_draw_text_simple (const gchar *text,
   MagickNewImage (result_wand, width, height, background);
   MagickAnnotateImage (result_wand, draw_wand, 0, textsize [TEXT_INFO_ASC], 0.0, text);
   MagickDrawImage (result_wand, draw_wand);
-  nim_imaging_effect_from_wand (&result_wand, NIM_EFFECT_GAUSSIAN, 0, 0, 3.0, 1.0, 0.0, FALSE);
+//  nim_imaging_effect_from_wand (&result_wand, NIM_EFFECT_GAUSSIAN, 0, 0, 3.0, 1.0, 0.0, FALSE);
   MagickTrimImage (result_wand, 0);
   
   temp_wand = DestroyMagickWand (temp_wand);
@@ -788,6 +841,7 @@ MagickWand* nim_imaging_draw_text_simple (const gchar *text,
   foreground = DestroyPixelWand (foreground);
   draw_wand = DestroyDrawingWand (draw_wand);
   if (font_name) g_free (font_name);
+  g_free (textsize);
 
   return result_wand;
 }
