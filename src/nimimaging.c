@@ -94,6 +94,8 @@ GdkPixbuf *nim_imaging_convert_wand_to_pixbuf (MagickWand *wand)
     {
       g_object_unref (G_OBJECT (pixbuf));
       pixbuf = NULL;
+    } else {
+      g_object_ref (G_OBJECT (pixbuf));
     }
   }
 
@@ -682,78 +684,6 @@ gboolean magick_is_animation (MagickWand *wand)
 
 
 //------------------------------------------------------------------------------
-static gchar *normalize_fontname (const gchar *fontname, gint *fontsize)
-{
-  gchar *sym;
-//  gint length = 0, n;
-  PangoFontDescription *pangodesc;
-  GString *string;
-  const gchar *family, *weight = NULL, *style = NULL;
-  PangoWeight pangoweight;
-  PangoStyle pangostyle;
-
-  if (fontname == NULL)
-    return g_strdup ("Sans-Bold-Italic");
-
-  pangodesc = pango_font_description_from_string (fontname);
-  family = pango_font_description_get_family (pangodesc);
-  pangoweight = pango_font_description_get_weight (pangodesc);
-  pangostyle = pango_font_description_get_style (pangodesc);
-  string = g_string_new (family);
-
-  switch (pangoweight) {
-    case PANGO_WEIGHT_THIN: weight = "twin"; break;
-    case PANGO_WEIGHT_ULTRALIGHT: weight = "ultralight"; break;
-    case PANGO_WEIGHT_LIGHT: weight = "light"; break;
-    case PANGO_WEIGHT_BOOK: weight = "book"; break;
-    case PANGO_WEIGHT_NORMAL:  weight = "normal"; break;
-    case PANGO_WEIGHT_MEDIUM: weight = "medium"; break;
-    case PANGO_WEIGHT_SEMIBOLD: weight = "semibold"; break;
-    case PANGO_WEIGHT_BOLD: weight = "bold"; break;
-    case PANGO_WEIGHT_ULTRABOLD: weight = "ultrabold"; break;
-    case PANGO_WEIGHT_HEAVY: weight = "heavy"; break;
-    case PANGO_WEIGHT_ULTRAHEAVY: weight = "ultraheavy"; break;
-    default: break;
-  } 
-
-  switch (pangostyle) {
-      case PANGO_STYLE_OBLIQUE: style = "oblique"; break;
-      case PANGO_STYLE_ITALIC: style = "italic"; break;
-      case PANGO_STYLE_NORMAL: break;
-      default: style = "Normal"; break;
-  }
-    
-  if (fontsize)
-    *fontsize = pango_font_description_get_size (pangodesc);
-
-  for (sym = string->str; ; sym++) {
-    if (*sym == '\0') break;
-    if (*sym == ' ') *sym = '-';
-    if (*sym == ',') *sym = '-';
-  }
-
-  if (style)
-    g_string_append_printf (string, "-%s", style);
-
-  if (weight)
-    g_string_append_printf (string, "-%s", weight);
-
-  pango_font_description_free (pangodesc);
-  return g_string_free (string, FALSE);
-//  copyname = g_strdup (fontname);
-
-
-//  if (fontsize) {
-//    *fontsize = (gint) strtol (fontname + length - 5, NULL, 10);
-//    *fontsize = CLAMP (*fontsize, NIM_MIN_FONT_SIZE, NIM_MAX_FONT_SIZE);
-//  }
-
-//  return copyname;
-}
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
     //  0 character width
     //  1 character height
     //  2 ascender
@@ -778,6 +708,7 @@ MagickWand* nim_imaging_draw_text_simple (const gchar *text,
                                           const gchar *fontname,
                                           gint fontsize,
                                           const gchar *fground,
+                                          const gchar *bground,
                                           gboolean stroke,
                                           gint linewidth)
 {
@@ -794,56 +725,95 @@ MagickWand* nim_imaging_draw_text_simple (const gchar *text,
   if (text == NULL || fontname == NULL)
     return NULL;
 
-  if (fontsize < 8) {
-    font_name = normalize_fontname (fontname, &font_size);
-  } else {  
-    font_name = normalize_fontname (fontname, NULL);
-    if (fontsize >= NIM_MIN_FONT_SIZE * 1024)
-      font_size = (fontsize + 512) >> 10;
-    else
-      font_size = fontsize;
-
-    fontsize = CLAMP (font_size, NIM_MIN_FONT_SIZE, NIM_MAX_FONT_SIZE);
-  }
-
-//  gchar **fontlist;
-//  size_t n_elem, n;
-//  fontlist = MagickQueryFonts (fontname, &n_elem);
-//  for (n = 0; n < n_elem; n++)
-//    g_print ("%s\n", fontlist [n]);
-//  if (fontlist) g_strfreev (fontlist);
-  g_print ("%s\n", font_name);
   result_wand = NewMagickWand ();
   temp_wand = NewMagickWand ();
   background = NewPixelWand ();
   foreground = NewPixelWand ();
   draw_wand = NewDrawingWand ();
 
-  PixelSetColor (foreground, fground);
-  PixelSetColor (background, "none");
+  PixelSetColor (foreground, fground ? fground : "#ffffffff");
+  PixelSetColor (background, bground ? bground : "none");
   DrawSetFillColor (draw_wand, foreground);
 
   MagickNewImage (temp_wand, 1, 1, background);
-  DrawSetFont (draw_wand, font_name);
-  DrawSetFontSize (draw_wand, font_size);
+  DrawSetFont (draw_wand, fontname);
+  DrawSetFontSize (draw_wand, fontsize);
   DrawSetTextAntialias (draw_wand, MagickTrue);
   textsize = MagickQueryMultilineFontMetrics (temp_wand, draw_wand, text);
-  width = textsize [4];
+  width = textsize [TEXT_INFO_WIDTH] +  textsize [TEXT_INFO_ADVANCE] / 2.0;
   height = textsize [TEXT_INFO_ASC] - textsize [TEXT_INFO_DSC];
-  MagickNewImage (result_wand, width, height, background);
-  MagickAnnotateImage (result_wand, draw_wand, 0, textsize [TEXT_INFO_ASC], 0.0, text);
-  MagickDrawImage (result_wand, draw_wand);
-//  nim_imaging_effect_from_wand (&result_wand, NIM_EFFECT_GAUSSIAN, 0, 0, 3.0, 1.0, 0.0, FALSE);
-  MagickTrimImage (result_wand, 0);
-  
+
+  if (width > NIM_MIN_FONT_SIZE && height > NIM_MIN_FONT_SIZE) {
+      MagickNewImage (result_wand, width, height, background);
+      MagickAnnotateImage (result_wand, draw_wand, 0, textsize [TEXT_INFO_ASC], 0.0, text);
+      MagickDrawImage (result_wand, draw_wand);
+    //  nim_imaging_effect_from_wand (&result_wand, NIM_EFFECT_GAUSSIAN, 0, 0, 3.0, 1.0, 0.0, FALSE);
+      MagickTrimImage (result_wand, 0);
+  } else {
+    result_wand = DestroyMagickWand (result_wand);
+    result_wand = NULL;
+  }
+    
   temp_wand = DestroyMagickWand (temp_wand);
   background = DestroyPixelWand (background);
   foreground = DestroyPixelWand (foreground);
   draw_wand = DestroyDrawingWand (draw_wand);
-  if (font_name) g_free (font_name);
+//  if (font_name) g_free (font_name);
   g_free (textsize);
 
   return result_wand;
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+gboolean nim_imaging_make_font_preview (GdkPixbuf **pixbuf,
+                                          const gchar *fontname,
+                                          gint         fontsize,
+                                          gint         preview_width,
+                                          gint         preview_height,
+                                          const gchar *foreground,
+                                          const gchar *background,
+                                          const gchar *preview_text,
+                                          gdouble      angle)
+{
+  MagickWand *wand = NULL;
+  GdkPixbuf *tmppixbuf = NULL;
+  gboolean response = FALSE;
+
+  if ((wand = nim_imaging_draw_text_simple (preview_text,
+                                            fontname,
+                                            fontsize,
+                                            foreground,
+                                            background,
+                                            FALSE,
+                                            1)) != NULL)
+  {
+
+    if (angle != 0.0)
+      nim_imaging_rotate_from_wand (&wand, angle, background);
+      
+    if (nim_imaging_resize_from_wand (&wand,
+                                      preview_width,
+                                      preview_height,
+                                      NIM_RESIZE_BOTH,
+                                      TRUE,
+                                      UndefinedFilter,
+                                      1.0))
+                                      {
+                                        
+      tmppixbuf = nim_imaging_convert_wand_to_pixbuf (wand);
+      if (GDK_IS_PIXBUF (tmppixbuf)) {
+        *pixbuf = tmppixbuf;
+        response = TRUE;
+      }
+    }
+  }
+
+  if (wand)
+    wand = DestroyMagickWand (wand);
+
+  return response;
 }
 //------------------------------------------------------------------------------
 

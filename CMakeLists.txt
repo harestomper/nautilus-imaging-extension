@@ -58,6 +58,7 @@ file (GLOB _translations ${CMAKE_SOURCE_DIR}/po/*.po)
 # Set sources for compiling
 ##
 FILE (GLOB SOURCES ${CMAKE_SOURCE_DIR}/src/nimdialog.c
+                   ${CMAKE_SOURCE_DIR}/src/nimfontchooser.c
                    ${CMAKE_SOURCE_DIR}/src/nimimaging.c
                    ${CMAKE_SOURCE_DIR}/src/main.c)
 

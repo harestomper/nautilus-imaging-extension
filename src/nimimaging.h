@@ -194,8 +194,19 @@ MagickWand* nim_imaging_draw_text_simple (const gchar *text,
                                           const gchar *fontname,
                                           gint fontsize,
                                           const gchar *fground,
+                                          const gchar *bground,
                                           gboolean stroke,
                                           gint linewidth);
+
+gboolean nim_imaging_make_font_preview (GdkPixbuf **pixbuf,
+                                          const gchar *fontname,
+                                          gint         fontsize,
+                                          gint         preview_width,
+                                          gint         preview_height,
+                                          const gchar *foreground,
+                                          const gchar *background,
+                                          const gchar *preview_text,
+                                          gdouble      angle);
 
 
 G_END_DECLS

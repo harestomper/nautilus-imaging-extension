@@ -65,7 +65,7 @@ int main (int argc, char **argv)
     fontsize = g_key_file_get_integer (config, MARKER_GROUP, "water_font:size", NULL);
     text = g_key_file_get_string (config, MARKER_GROUP, "water_entry", NULL);
     foreground = g_key_file_get_string (config, MARKER_GROUP, "water_font_color", NULL);
-    wand = nim_imaging_draw_text_simple (text, fontname, fontsize, foreground, FALSE, 0);
+    wand = nim_imaging_draw_text_simple (text, fontname, fontsize, foreground, NULL, FALSE, 0);
     nim_imaging_effect_from_wand (&wand, NIM_EFFECT_SHADOW, 0, 0, 0.0, 6.0, 0.0, FALSE);
     MagickWriteImage (wand, "test/result-text.png");
     DestroyMagickWand (wand);

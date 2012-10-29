@@ -24,6 +24,7 @@
 
 #include "nimdialog.h"
 #include "nimimaging.h"
+#include "nimfontchooser.h"
 //------------------------------------------------------------------------------
 
 
@@ -1074,6 +1075,8 @@ static void nim_dialog_marker_init (NimDialog *this)
   NimDialogPrivate *priv;
   GObject *button;
   GObject *child;
+  GObject *mainbox;
+  GtkWidget *fontchooser;
 
   priv = this->priv;
 
@@ -1105,6 +1108,9 @@ static void nim_dialog_marker_init (NimDialog *this)
                               G_CALLBACK (nim_dialog_simple_callback));
   nim_dialog_set_default (this, MARKER_GROUP, "water_method",
                               G_CALLBACK (nim_dialog_water_method_changed));
+  mainbox = gtk_builder_get_object (priv->builder, "box14");
+  fontchooser = nim_font_chooser_new ();
+  gtk_box_pack_start (GTK_BOX (mainbox), fontchooser, FALSE, FALSE, 0);
 }
 //------------------------------------------------------------------------------
 
