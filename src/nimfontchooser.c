@@ -56,10 +56,19 @@ static uint   signals [SIGNAL_LAST];
 //------------------------------------------------------------------------------
 struct _NimFontChooserPrivate
 {
-  GtkWidget *fontname;
-  GtkWidget *fontsize;
-  GtkWidget *foreground;
+  GtkWidget *button_font;  // Toggle button to open popup window
+  GtkWidget *spin_size;    // Spin button for font size
+  GtkWidget *window_popup; // Popup window for menu of font selector
+  GtkWidget *treeview;     // Tree of menu
+  GtkWidget *image_font;   // Image of font preview
+  GtkWidget *image_color;  // Image of foreground color
+  GtkTreeModel *treemodel: // Model of the tree view
+  GtkTreePath  *selected_path; // Current selected path
+  GSList   *exists_other;   // LIst of custom added files
+  gint      n_elem;        // Num of the elements on tree view
   gint      last_active_row;
+  gchar    *foreground;    // String format of the font color
+  gchar    *background;    // String format of the background
 };
 //------------------------------------------------------------------------------
 
@@ -135,31 +144,62 @@ static void nim_font_chooser_class_init (NimFontChooserClass *klass)
 static void nim_font_chooser_init (NimFontChooser *this)
 {
   NimFontChooserPrivate *priv;
-  GtkListStore *liststore;
   GtkCellRenderer *celltext;
   GtkCellRenderer *cellpixbuf;
+  GtkTreeViewColumn *column;
   GtkAdjustment *adjustment;
+  GtkWidget *scrolled;
+  GtkWidget *colorbutton;
+  GtkSizeGroup *sizegroup;
   GdkPixbuf *pixbuf;
-  GtkWidget *box;
   
   this->priv = G_TYPE_INSTANCE_GET_PRIVATE (this, NIM_TYPE_FONT_CHOOSER, NimFontChooserPrivate);
   priv = this->priv;
 
+  priv->n_elem = 0;
   priv->last_active_row = 0;
-  liststore = gtk_list_store_new (COLUMN_LAST, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_STRING);
-  priv->fontname = gtk_combo_box_new_with_model (GTK_TREE_MODEL (liststore));
+  priv->foreground = NULL;
+  priv->background = NULL;
+  priv->exists_other = NULL;
+  
+  priv->treemodel = gtk_list_store_new (COLUMN_LAST, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_STRING);
+  priv->treeview = gtk_tree_view_new_with_model (priv->model);
+  column = gtk_tree_view_column_new ();
   celltext = gtk_cell_renderer_text_new ();
   cellpixbuf = gtk_cell_renderer_pixbuf_new ();
-  gtk_cell_layout_pack_start (GTK_CELL_LAYOUT (priv->fontname), cellpixbuf, FALSE);
-  gtk_cell_layout_pack_start (GTK_CELL_LAYOUT (priv->fontname), celltext, TRUE);
+  scrolled = gtk_scrolled_window_new (NULL, NULL);
+  priv->window_popup = gtk_window_new (GTK_WINDOW_POPUP);
 
-  gtk_cell_layout_set_attributes (GTK_CELL_LAYOUT (priv->fontname),
+  gtk_cell_layout_pack_start (GTK_CELL_LAYOUT (column), cellpixbuf, FALSE);
+  gtk_cell_layout_pack_start (GTK_CELL_LAYOUT (column), celltext, TRUE);
+  gtk_tree_view_append_column (GTK_TREE_VIEW (priv->treeview), column);
+  gtk_tree_view_set_headers_visible (GTK_TREE_VIEW (priv->treeview), FALSE);
+  gtk_tree_view_set_hover_selection (GTK_TREE_VIEW (priv->treeview), TRUE);
+  gtk_container_add (GTK_CONTAINER (scrolled), priv->treeview);
+  gtk_container_add (GTK_CONTAINER (priv->popup), scrolled);
+
+  priv->image_font = gtk_image_new ();
+  priv->image_color = gtk_image_new ();
+  priv->button_font = gtk_toggle_button_new ();
+  adjustment = gtk_adjustment_new (26, 8, 1000, 1, 10, 0);
+  priv->spin_size = gtk_spin_button_new (adjustment, 0, 0);
+  sizegroup = gtk_size_group_new (GTK_SIZE_GROUP_VERTICAL);
+
+  gtk_container_add (GTK_CONTAINER (priv->
+  gtk_box_pack_start (GTK_BOX (box), priv->foreground, TRUE, TRUE, 0);
+  gtk_box_pack_end (GTK_BOX (box), priv->fontsize, FALSE, FALSE, 0);
+  gtk_box_pack_start (GTK_BOX (this), priv->fontname, FALSE, FALSE, 0);
+  gtk_box_pack_start (GTK_BOX (this), box, FALSE, FALSE, 0);
+  gtk_orientable_set_orientation (GTK_ORIENTABLE (this), GTK_ORIENTATION_HORIZONTAL);
+  gtk_box_set_spacing (GTK_BOX (this), 5);
+
+  gtk_cell_layout_set_attributes (GTK_CELL_LAYOUT (column),
                                     cellpixbuf,
                                     "pixbuf",
                                     COLUMN_PIXBUF,
                                     NULL);
 
-  gtk_cell_layout_set_attributes (GTK_CELL_LAYOUT (priv->fontname),
+  gtk_cell_layout_set_attributes (GTK_CELL_LAYOUT (column),
                                     celltext,
                                     "text",
                                     COLUMN_TEXT,
@@ -171,17 +211,6 @@ static void nim_font_chooser_init (NimFontChooser *this)
                                     TRUE,
                                     NULL);
                                     
-  box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 5);
-  adjustment = gtk_adjustment_new (26, 8, 1000, 1, 10, 0);
-  priv->fontsize = gtk_spin_button_new (adjustment, 0, 0);
-  priv->foreground = gtk_color_button_new ();
-  gtk_color_button_set_use_alpha (GTK_COLOR_BUTTON (priv->foreground), TRUE);
-  gtk_box_pack_start (GTK_BOX (box), priv->foreground, TRUE, TRUE, 0);
-  gtk_box_pack_end (GTK_BOX (box), priv->fontsize, FALSE, FALSE, 0);
-  gtk_box_pack_start (GTK_BOX (this), priv->fontname, FALSE, FALSE, 0);
-  gtk_box_pack_start (GTK_BOX (this), box, FALSE, FALSE, 0);
-  gtk_orientable_set_orientation (GTK_ORIENTABLE (this), GTK_ORIENTATION_VERTICAL);
-  gtk_box_set_spacing (GTK_BOX (this), 5);
   gtk_widget_show_all (GTK_WIDGET (this));
 
   
