@@ -207,7 +207,9 @@ gboolean nim_imaging_make_font_preview (GdkPixbuf **pixbuf,
                                           const gchar *background,
                                           const gchar *preview_text,
                                           gdouble      angle);
-
+gchar *rgba_to_color (GdkRGBA *rgba);
+gboolean color_to_rgba (GdkRGBA *rgba, const gchar *xstring);
+guint32 color_to_uint (const gchar *str, gint *n_elem);
 
 G_END_DECLS
 

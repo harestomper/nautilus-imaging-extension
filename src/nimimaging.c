@@ -731,8 +731,8 @@ MagickWand* nim_imaging_draw_text_simple (const gchar *text,
   foreground = NewPixelWand ();
   draw_wand = NewDrawingWand ();
 
-  PixelSetColor (foreground, fground ? fground : "#ffffffff");
-  PixelSetColor (background, bground ? bground : "none");
+  PixelSetColor (foreground, (fground != NULL) ? fground : "#ffffffff");
+  PixelSetColor (background, (bground != NULL) ? bground : "#00000000");
   DrawSetFillColor (draw_wand, foreground);
 
   MagickNewImage (temp_wand, 1, 1, background);
@@ -814,6 +814,64 @@ gboolean nim_imaging_make_font_preview (GdkPixbuf **pixbuf,
     wand = DestroyMagickWand (wand);
 
   return response;
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+guint32 color_to_uint (const gchar *str, gint *n_elem)
+{
+  guint32 result = 0;
+  char *start, *end;
+  gint len = 0, shift, value;
+
+  for (start = (char*) str; *start != '\0' && *start != '#' && *start != 'x'; start++);
+  for (end = start; *end != '\0' && *(end + 1) != '\0' && end - start < 8; end++, len++);
+  for (; start < end ; end--)
+  {
+    shift = (len - (end - start)) * 4;
+    value = g_ascii_xdigit_value (*end);
+    result += (value << shift);
+  }
+  if (n_elem)
+    *n_elem = len;
+  return result;
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+gboolean color_to_rgba (GdkRGBA *rgba, const gchar *xstring)
+{
+  gint n_elem;
+  guint32 value;
+
+  value = color_to_uint (xstring, &n_elem);
+
+  if (n_elem >= 6 && value > 0) {
+    gint shift = 0;
+    shift = (n_elem - 8) * 4;
+    rgba->alpha = (shift < 0) ? 1.0 : (gdouble) ((value >> (shift)) & 0xff) / 255.;
+    rgba->blue =  ((value >> (shift + 8)) & 0xff) / 255.;
+    rgba->green = ((value >> (shift + 16)) & 0xff) / 255.;
+    rgba->red =   ((value >> (shift + 24)) & 0xff) / 255.;
+    return TRUE;
+  }
+  return FALSE;
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+gchar *rgba_to_color (GdkRGBA *rgba)
+{
+  gchar *result;
+  result = g_strdup_printf ("#%02x%02x%02x%02x", 
+                            (guint8) (ceil (rgba->red * 255.)),
+                            (guint8) (ceil (rgba->green * 255.)),
+                            (guint8) (ceil (rgba->blue * 255.)),
+                            (guint8) (ceil (rgba->alpha * 255.)));
+  return result;
 }
 //------------------------------------------------------------------------------
 

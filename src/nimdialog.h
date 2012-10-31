@@ -60,6 +60,9 @@ struct _NimDialogClass
 #define ROUND_GROUP   "RoundingCorners"
 #define EFFECTS_GROUP "AddEffect"
 #define MARKER_GROUP  "DrawWatermark"
+#define MARKER_FONT_NAME_KEY "water_font_name"
+#define MARKER_FONT_SIZE_KEY "water_font_size"
+#define MARKER_FONT_COLOR_KEY "water_font_color"
 
 
 GType nim_dialog_get_type (void);

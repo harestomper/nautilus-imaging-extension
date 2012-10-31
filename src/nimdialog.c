@@ -696,6 +696,32 @@ static void nim_dialog_water_method_changed (GtkComboBox *combo, NimDialog *this
 
 
 //------------------------------------------------------------------------------
+static void fontchooser_font_set_cb (NimFontChooser *chooser, const gchar *font_name, NimDialog *this)
+{
+  if (font_name)
+    g_key_file_set_string (this->priv->config, MARKER_GROUP, MARKER_FONT_NAME_KEY, font_name);
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+static void fontchooser_color_set_cb (NimFontChooser *chooser, const gchar *foreground, NimDialog *this)
+{
+  if (foreground)
+    g_key_file_set_string (this->priv->config, MARKER_GROUP, MARKER_FONT_COLOR_KEY, foreground);
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+static void fontchooser_size_changed (NimFontChooser *chooser, gint fontsize, NimDialog *this)
+{
+    g_key_file_set_integer (this->priv->config, MARKER_GROUP, MARKER_FONT_SIZE_KEY, fontsize);
+}
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
 static GObject* nim_dialog_set_default (NimDialog *this,
                                         const gchar *group,
                                         const gchar *wname,
@@ -743,6 +769,9 @@ static GObject* nim_dialog_set_default (NimDialog *this,
       g_signal_connect (object, signal_name, callback, this);
   }
 
+  if (GTK_IS_EDITABLE (object))
+    gtk_editable_set_editable (GTK_EDITABLE (object), TRUE);
+    
   if (g_key_file_has_key (priv->config, group, wname, NULL)) {
     if (GTK_IS_COMBO_BOX (object)) {
       vint = g_key_file_get_integer (priv->config, group, wname, NULL);
@@ -766,11 +795,11 @@ static GObject* nim_dialog_set_default (NimDialog *this,
       if (vchar) g_free (vchar);
 
     } else if (GTK_IS_COLOR_BUTTON (object)) {
-      GdkColor color = {0};
+      GdkRGBA color;
       vchar = g_key_file_get_string (priv->config, group, wname, NULL);
 
-      if (vchar && gdk_color_parse (vchar, &color))
-        gtk_color_button_set_color (GTK_COLOR_BUTTON (object), &color);
+      if (vchar && color_to_rgba (&color, vchar))
+        gtk_color_button_set_rgba (GTK_COLOR_BUTTON (object), &color);
 
       if (vchar) g_free (vchar);
 
@@ -829,11 +858,11 @@ static void nim_dialog_write_value (NimDialog *this, GObject *object)
       g_key_file_set_string (priv->config, group, wname, vchar);
 
     } else if (GTK_IS_COLOR_BUTTON (object)) {
-      GdkColor color = {0};
+      GdkRGBA color;
       gchar *value;
 
-      gtk_color_button_get_color (GTK_COLOR_BUTTON (object), &color);
-      value = gdk_color_to_string (&color);
+      gtk_color_button_get_rgba (GTK_COLOR_BUTTON (object), &color);
+      value = rgba_to_color (&color);
 
       if (value) {
         g_key_file_set_string (priv->config, group, wname, value);
@@ -1077,20 +1106,17 @@ static void nim_dialog_marker_init (NimDialog *this)
   GObject *child;
   GObject *mainbox;
   GtkWidget *fontchooser;
+  gchar *fontname;
+  gchar *color;
+  gint fontsize;
 
   priv = this->priv;
 
   nim_dialog_set_default (this, MARKER_GROUP, "water_file",
                               G_CALLBACK (nim_dialog_water_file_button_toggled));
-  nim_dialog_set_default (this, MARKER_GROUP, "water_entry",
+  child = nim_dialog_set_default (this, MARKER_GROUP, "water_entry",
                               G_CALLBACK (nim_dialog_simple_callback));
-  button = nim_dialog_set_default (this, MARKER_GROUP, "water_font",
-                              G_CALLBACK (nim_dialog_simple_callback));
-  gtk_font_chooser_set_preview_text (GTK_FONT_CHOOSER (button), "Preview text");
-
-  button = nim_dialog_set_default (this, MARKER_GROUP, "water_font_color",
-                              G_CALLBACK (nim_dialog_simple_callback));
-  gtk_color_button_set_use_alpha (GTK_COLOR_BUTTON (button), TRUE);
+  gtk_editable_set_editable (GTK_EDITABLE (child), TRUE);
   
   nim_dialog_set_default (this, MARKER_GROUP, "water_opacity",
                               G_CALLBACK (nim_dialog_simple_callback));
@@ -1108,9 +1134,28 @@ static void nim_dialog_marker_init (NimDialog *this)
                               G_CALLBACK (nim_dialog_simple_callback));
   nim_dialog_set_default (this, MARKER_GROUP, "water_method",
                               G_CALLBACK (nim_dialog_water_method_changed));
-  mainbox = gtk_builder_get_object (priv->builder, "box14");
+  mainbox = gtk_builder_get_object (priv->builder, "water_font_box");
   fontchooser = nim_font_chooser_new ();
-  gtk_box_pack_start (GTK_BOX (mainbox), fontchooser, FALSE, FALSE, 0);
+  gtk_container_add (GTK_CONTAINER (mainbox), fontchooser);
+  g_signal_connect (fontchooser, "font-set", G_CALLBACK (fontchooser_font_set_cb), this);
+  g_signal_connect (fontchooser, "color-set", G_CALLBACK (fontchooser_color_set_cb), this);
+  g_signal_connect (fontchooser, "size_changed", G_CALLBACK (fontchooser_size_changed), this);
+
+  fontname = g_key_file_get_string (priv->config, MARKER_GROUP, MARKER_FONT_NAME_KEY, NULL);
+  color = g_key_file_get_string (priv->config, MARKER_GROUP, MARKER_FONT_COLOR_KEY, NULL);
+  fontsize = g_key_file_get_integer (priv->config, MARKER_GROUP, MARKER_FONT_SIZE_KEY, NULL);
+
+  fontname = (fontname != NULL) ? fontname : g_strdup (DEFAULT_MARKER_FONT);
+  nim_font_chooser_set_font_name (NIM_FONT_CHOOSER (fontchooser), fontname);
+  g_free (fontname);
+
+  color = (color != NULL) ? color : g_strdup (DEFAULT_MARKER_FG);
+  nim_font_chooser_set_foreground (NIM_FONT_CHOOSER (fontchooser), color);
+  g_free (color);
+
+  fontsize = fontsize == 0 ? DEFAULT_MARKER_FONT_SIZE : fontsize;
+  fontsize = CLAMP (fontsize, NIM_MIN_FONT_SIZE, NIM_MAX_FONT_SIZE);
+  nim_font_chooser_set_font_size (NIM_FONT_CHOOSER (fontchooser), fontsize);
 }
 //------------------------------------------------------------------------------
 

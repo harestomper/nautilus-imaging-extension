@@ -61,15 +61,17 @@ int main (int argc, char **argv)
     config = g_key_file_new ();
     data = nim_dialog_get_data (dialog, NULL);
     g_key_file_load_from_data (config, data, -1, 0, NULL);
-    fontname = g_key_file_get_string (config, MARKER_GROUP, "water_font", NULL);
-    fontsize = g_key_file_get_integer (config, MARKER_GROUP, "water_font:size", NULL);
+    fontname = g_key_file_get_string (config, MARKER_GROUP, "water_font_name", NULL);
+    fontsize = g_key_file_get_integer (config, MARKER_GROUP, "water_font_size", NULL);
     text = g_key_file_get_string (config, MARKER_GROUP, "water_entry", NULL);
     foreground = g_key_file_get_string (config, MARKER_GROUP, "water_font_color", NULL);
     wand = nim_imaging_draw_text_simple (text, fontname, fontsize, foreground, NULL, FALSE, 0);
     nim_imaging_effect_from_wand (&wand, NIM_EFFECT_SHADOW, 0, 0, 0.0, 6.0, 0.0, FALSE);
-    MagickWriteImage (wand, "test/result-text.png");
+    MagickSetFormat (wand, "png");
+    MagickWriteImage (wand, "/tmp/result-text.png");
     DestroyMagickWand (wand);
     g_print ("%s\n", data);
+    g_print ("COLOR: %s\n", foreground);
   }
 
   gdk_threads_leave ();
