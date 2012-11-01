@@ -267,6 +267,7 @@ static void nim_font_chooser_init (NimFontChooser *this)
   gtk_box_pack_start (GTK_BOX (this), colorbutton, TRUE, TRUE, 0);
   gtk_box_pack_start (GTK_BOX (this), filebutton, TRUE, TRUE, 0);
   gtk_box_pack_start (GTK_BOX (this), priv->spin_size, TRUE, TRUE, 0);
+  gtk_widget_set_sensitive (priv->fontbutton, FALSE);
 
   gtk_size_group_add_widget (wgroup, priv->fontbutton);
   gtk_size_group_add_widget (wgroup, colorbutton);
@@ -393,7 +394,9 @@ static void nim_font_shooser_open_filechooser (GtkWidget *widget, NimFontChooser
   preview_widget = gtk_image_new ();
   filter = gtk_file_filter_new ();
   gtk_file_filter_add_mime_type (filter, "application/x-font-ttf");
+  gtk_file_filter_add_mime_type (filter, "application/vnd.ms-opentype");
   gtk_file_filter_add_pattern (filter, "*.ttf");
+  gtk_file_filter_add_pattern (filter, "*.otf");
   gtk_file_filter_set_name (filter, "Files of fonts");
   gtk_file_chooser_set_filter (GTK_FILE_CHOOSER (dialog), filter);
   gtk_file_chooser_set_preview_widget (GTK_FILE_CHOOSER (dialog), preview_widget);
@@ -534,12 +537,15 @@ static gboolean nim_font_chooser_append (NimFontChooser *chooser,
   if (response && iter)
     *iter = new_iter;
 
-  if (length == 0)
+  if (length == 0) {
     nim_font_chooser_set_active (chooser, -1);
-  else if (response && set_active)
+  } else if (response && set_active)
     nim_font_chooser_set_active_iter (chooser, &new_iter);
   else
     nim_font_chooser_set_active (chooser, priv->last_active_row);
+
+  if (length > 0)
+    gtk_widget_set_sensitive (priv->fontbutton, TRUE);
 
   if (iter)
     *iter = new_iter;
@@ -568,6 +574,8 @@ static gboolean nim_font_chooser_read_fonts (NimFontChooser *chooser)
       nim_font_chooser_append (chooser, priv->font_name, NULL, TRUE);
     else
       nim_font_chooser_set_active (chooser, 0);
+
+    gtk_widget_set_sensitive (priv->fontbutton, TRUE);
   }
 
   priv->list_complete = TRUE;
@@ -595,7 +603,6 @@ static void nim_font_chooser_font_button_toggled (GtkWidget *widget, NimFontChoo
 
   if (active) {
     nim_font_chooser_popup (chooser);
-    gtk_widget_set_sensitive (widget, FALSE);
   } else if (gtk_widget_get_visible (priv->popup_window))
     nim_font_chooser_popdown (chooser);
 

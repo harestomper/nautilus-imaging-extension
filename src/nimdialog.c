@@ -912,8 +912,10 @@ static void nim_dialog_config_init (NimDialog *this)
   filename = nim_imaging_find_file (NIM_FIND_CONFIG);
   priv->config = g_key_file_new ();
 
+printf ("%s: %s\n", G_STRLOC, filename);
   if (filename) {
     if (!g_key_file_load_from_file (priv->config, filename, G_KEY_FILE_NONE, NULL)) {
+printf ("%s: Set defaults values\n", G_STRLOC);
       g_key_file_set_integer (priv->config, ROTATE_GROUP, "rotate_angle_combo", DEFAULT_ROTATE_MODE);
       g_key_file_set_string (priv->config, ROTATE_GROUP, "rotate_color_button", DEFAULT_ROTATE_COLOR);
       g_key_file_set_double (priv->config, ROTATE_GROUP, "rotate_angle_spin", DEFAULT_ROTATE_ANGLE);
@@ -964,6 +966,8 @@ static void nim_dialog_config_init (NimDialog *this)
       g_key_file_set_boolean (priv->config, RESIZE_GROUP, "resize_thumb_button", DEFAULT_RESIZE_THUMB);
       g_key_file_set_integer (priv->config, RESIZE_GROUP, "resize_filter_combo", DEFAULT_RESIZE_FILTER);
       g_key_file_set_double (priv->config, RESIZE_GROUP, "resize_factor_spin", DEFAULT_RESIZE_FACTOR);
+    } else {
+printf ("%s: Read config success\n", G_STRLOC);
     }
     g_free (filename);
   }

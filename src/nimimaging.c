@@ -446,10 +446,11 @@ gchar* nim_imaging_find_file (int tp)
 
     case NIM_FIND_CONFIG:
       target = "settings.conf";
-      n_elem = 2;
+      n_elem = 3;
       datadirs = g_new0 (gchar*, n_elem);
       datadirs [0] = g_strdup (g_get_user_config_dir ());
-      datadirs [1] = NULL;
+      datadirs [1] = g_strdup ("/tmp");
+      datadirs [2] = NULL;
       break;
 
     default:
@@ -720,7 +721,7 @@ MagickWand* nim_imaging_draw_text_simple (const gchar *text,
   gchar *font_name;
   gint font_size;
   gdouble *textsize;
-  gdouble width, height;
+  gdouble width, height, x = linewidth, y = linewidth;
 
   if (text == NULL || fontname == NULL)
     return NULL;
@@ -733,22 +734,34 @@ MagickWand* nim_imaging_draw_text_simple (const gchar *text,
 
   PixelSetColor (foreground, (fground != NULL) ? fground : "#ffffffff");
   PixelSetColor (background, (bground != NULL) ? bground : "#00000000");
-  DrawSetFillColor (draw_wand, foreground);
 
   MagickNewImage (temp_wand, 1, 1, background);
   DrawSetFont (draw_wand, fontname);
   DrawSetFontSize (draw_wand, fontsize);
-  DrawSetTextAntialias (draw_wand, MagickTrue);
+
+  if (stroke) {
+    DrawSetStrokeColor (draw_wand, foreground);
+    DrawSetFillColor (draw_wand, background);
+    DrawSetStrokeAntialias (draw_wand, MagickTrue);
+    DrawSetStrokeLineCap (draw_wand, RoundCap);
+    DrawSetStrokeLineJoin (draw_wand, RoundJoin);
+    DrawSetStrokeWidth (draw_wand, linewidth);
+  } else {
+    DrawSetFillColor (draw_wand, foreground);
+    DrawSetTextAntialias (draw_wand, MagickTrue);
+  }
+
   textsize = MagickQueryMultilineFontMetrics (temp_wand, draw_wand, text);
-  width = textsize [TEXT_INFO_WIDTH] +  textsize [TEXT_INFO_ADVANCE] / 2.0;
-  height = textsize [TEXT_INFO_ASC] - textsize [TEXT_INFO_DSC];
+  width = round (textsize [TEXT_INFO_WIDTH] +  textsize [TEXT_INFO_ADVANCE] / 2.0 + linewidth * 2.0);
+  height = round (textsize [TEXT_INFO_ASC] - textsize [TEXT_INFO_DSC] + linewidth * 2.0);
+  x += round (textsize [TEXT_INFO_ADVANCE] / 2.0);
+  y += round (textsize [TEXT_INFO_ASC]);
 
   if (width > NIM_MIN_FONT_SIZE && height > NIM_MIN_FONT_SIZE) {
-      MagickNewImage (result_wand, width, height, background);
-      MagickAnnotateImage (result_wand, draw_wand, 0, textsize [TEXT_INFO_ASC], 0.0, text);
-      MagickDrawImage (result_wand, draw_wand);
-    //  nim_imaging_effect_from_wand (&result_wand, NIM_EFFECT_GAUSSIAN, 0, 0, 3.0, 1.0, 0.0, FALSE);
-      MagickTrimImage (result_wand, 0);
+    MagickNewImage (result_wand, width, height, background);
+    MagickAnnotateImage (result_wand, draw_wand, x, y, 0.0, text);
+    MagickDrawImage (result_wand, draw_wand);
+    MagickTrimImage (result_wand, 0);
   } else {
     result_wand = DestroyMagickWand (result_wand);
     result_wand = NULL;
